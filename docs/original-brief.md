@@ -1,3 +1,5 @@
+> **Superseded.** This was the original brief. Current language lives in `CONTEXT.md`; decisions in `docs/adr/`.
+
 Aqui está um modelo completo e estruturado de **`PROJECT_CONTEXT.md`** para você colocar na raiz do seu projeto no VSCode. Ele foi formatado com todo o contexto necessário para que o Claude (ou o Cursor) entenda exatamente os objetivos, a arquitetura em 3 níveis, a extração de dados públicos jurídicos via API e a transição de Jupyter Notebooks para uma API em FastAPI.
 
 ---
