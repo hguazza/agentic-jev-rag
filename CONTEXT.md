@@ -71,6 +71,10 @@ Advance or reject, with a score per Scorecard competency and the Evidence for ea
 **Interviewer**:
 The agent that holds a text interview with a Candidate, asking questions from the Job's competencies and the Candidate's history, and gives an Interview assessment.
 
+**Probe**:
+A forensic follow-up question in a live interview, asked when the Turn check finds an answer shallow: what the Candidate personally did, how, why, or with what result. At most two per topic.
+_Avoid_: drill-down
+
 **Simulated candidate**:
 An LLM playing a Candidate from their Profile, so interviews can run without a human. Used in demos and evaluations only.
 

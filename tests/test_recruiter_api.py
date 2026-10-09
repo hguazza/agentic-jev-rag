@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from agentic_jev_rag.gateway import ToolCall
 from agentic_jev_rag.recruiter.api import create_recruiter_app
-from tests.interview_scripts import interview_gateway
+from tests.interview_scripts import interview_gateway, interview_question
 from tests.rag_scripts import TURN_OUTCOMES, by_agent, scripted_gateway
 
 ADVANCE = {
@@ -52,11 +52,6 @@ def sourcer_submitting(*candidate_ids):
 def screener(model, messages, tools):
     candidate = re.search(r"Candidate (C-\d+)", messages[1]["content"]).group(1)
     return [ToolCall("scr", "submit_verdict", ADVANCE if candidate == "C-001" else REJECT)]
-
-
-def interview_question(prompt):
-    asked = int(re.search(r"Questions asked: (\d+)", prompt).group(1))
-    return {"done": asked >= 2, "question": f"Tell me about question {asked + 1}."}
 
 
 def recruiter_gateway(*, shortlist=("C-001", "C-003"), verdict="allowed", grounded=True):

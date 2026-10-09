@@ -13,10 +13,16 @@ ASSESSMENT = {
 }
 
 
+COMPETENCIES = ["System design", "Delivery", "Collaboration"]
+
+
 def interview_question(prompt):
-    """Two questions, then done."""
+    """Two questions, then done. Each names the competency it assesses."""
     asked = int(re.search(r"Questions asked: (\d+)", prompt).group(1))
-    return {"done": asked >= 2, "question": f"Tell me about question {asked + 1}."}
+    return {"done": asked >= 2, "question": f"Tell me about question {asked + 1}.", "competency": COMPETENCIES[asked % 3]}
+
+
+PROBE = {"interview_probe": {"question": "What did you do personally?"}}
 
 
 def interview_gateway(**kwargs):

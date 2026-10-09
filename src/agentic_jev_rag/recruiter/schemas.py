@@ -61,6 +61,7 @@ class InterviewTurn(BaseModel):
         description="How the question was put: a new `question`, a `probe` (follow-up on a vague answer), a `reprompt` "
         "(the previous reply could not be understood) or a `redirect` (the previous reply tried to instruct the AI).",
     )
+    competency: str = Field(default="", description="The Scorecard competency the question assesses; empty for the opening question.")
     check: str | None = Field(
         default=None,
         description="The Turn check outcome for the answer: `substantive`, `shallow`, `unintelligible`, `off_topic` or "
@@ -95,6 +96,10 @@ class InterviewAssessment(BaseModel):
     )
     summary: str = Field(description="A short summary of the interview.")
     red_flags: list[RedFlag] = Field(default_factory=list, description="Things a human recruiter should look at, with quotes.")
+    probes_sustained: dict[str, int] = Field(
+        default_factory=dict,
+        description="Per probed competency, how many follow-up questions the Candidate answered with specifics. Live interviews only.",
+    )
     system_1_trace: list[TraceOut] = Field(
         default_factory=list, description="Every System 1 decision made during a live interview, in order. Empty for simulated interviews."
     )

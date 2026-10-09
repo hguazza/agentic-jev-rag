@@ -2,7 +2,7 @@
 
 from agentic_jev_rag.recruiter import interviewer
 from agentic_jev_rag.recruiter.interview_graph import build_interview_graph
-from tests.interview_scripts import checking, interview_gateway, pending, prompts_for, reply, start
+from tests.interview_scripts import PROBE, checking, interview_gateway, pending, prompts_for, reply, start
 
 
 def count_documents(ctx):
@@ -100,3 +100,36 @@ def test_every_turn_check_is_in_the_assessments_trace(recruiter_context):
 
     checks = [t for t in done["assessment"].system_1_trace if t.decision == "turn_check"]
     assert [(t.outcome, t.implementation) for t in checks] == [("substantive", "jev")] * 2
+
+
+def test_a_shallow_answer_gets_up_to_two_probes_that_do_not_count_as_topics(recruiter_context):
+    ctx = recruiter_context(interview_gateway(turn=checking({"vague": "shallow"}), structured=PROBE))
+    graph = build_interview_graph(ctx)
+    start(graph, ctx)
+
+    first_probe = reply(graph, "A vague answer.")
+    second_probe = reply(graph, "Still vague.")
+    next_topic = reply(graph, "Still vague, again.")
+
+    assert pending(first_probe) == {"question": "What did you do personally?", "kind": "probe"}
+    assert pending(second_probe)["kind"] == "probe"
+    assert pending(next_topic) == {"question": "Tell me about question 2.", "kind": "question"}
+    done = reply(graph, "I owned on-call.")
+    assert done["assessment"].probes_sustained == {"System design": 0}
+
+
+def test_a_probe_answered_with_specifics_is_sustained_and_moves_on(recruiter_context):
+    ctx = recruiter_context(interview_gateway(turn=checking({"vague": "shallow"}), structured=PROBE))
+    graph = build_interview_graph(ctx)
+    start(graph, ctx)
+
+    reply(graph, "A vague answer.")
+    after_probe = reply(graph, "I wrote the consumer and replayed the dead letter topic after the fix.")
+    done = reply(graph, "I owned on-call.")
+
+    assert pending(after_probe)["question"] == "Tell me about question 2."
+    assessment = done["assessment"]
+    assert assessment.probes_sustained == {"System design": 1}
+    assert [(t.kind, t.competency) for t in assessment.turns] == [
+        ("question", "System design"), ("probe", "System design"), ("question", "Delivery"),
+    ]

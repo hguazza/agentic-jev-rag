@@ -107,7 +107,8 @@ def build_recruiter_graph(ctx: RecruiterContext, *, simulate_interviews: bool = 
             briefing = interviewer.brief(ctx, candidate, job)
             turns: list[InterviewTurn] = []
             while (question := interviewer.next_question(ctx, briefing.text, turns)) is not None:
-                turns.append(InterviewTurn(question=question, answer=interviewer.simulated_answer(ctx, candidate, question)))
+                answer = interviewer.simulated_answer(ctx, candidate, question.text)
+                turns.append(InterviewTurn(question=question.text, answer=answer, competency=question.competency))
             assessments.append(interviewer.assess(ctx, briefing.text, candidate["id"], job["id"], turns))
             done.append(candidate_id)
         return {"interviewed_ids": done, "assessments": assessments}

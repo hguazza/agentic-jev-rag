@@ -10,8 +10,14 @@ from agentic_jev_rag.recruiter.schemas import CompetencyScore, InterviewAssessme
 
 QUESTION_SCHEMA = {
     "type": "object",
-    "properties": {"done": {"type": "boolean"}, "question": {"type": "string"}},
-    "required": ["done", "question"],
+    "properties": {"done": {"type": "boolean"}, "question": {"type": "string"}, "competency": {"type": "string"}},
+    "required": ["done", "question", "competency"],
+    "additionalProperties": False,
+}
+PROBE_SCHEMA = {
+    "type": "object",
+    "properties": {"question": {"type": "string"}},
+    "required": ["question"],
     "additionalProperties": False,
 }
 ASSESSMENT_SCHEMA = {
@@ -24,6 +30,12 @@ ASSESSMENT_SCHEMA = {
     "required": ["scores", "recommendation", "summary"],
     "additionalProperties": False,
 }
+
+
+@dataclass(frozen=True)
+class Question:
+    text: str
+    competency: str
 
 
 @dataclass(frozen=True)
@@ -64,20 +76,40 @@ def dossier_text(candidate: dict) -> str:
 
 def next_question(
     ctx: RecruiterContext, briefing: str, turns: list[InterviewTurn], max_questions: int = 4, *, asked: int | None = None
-) -> str | None:
+) -> Question | None:
     """The next question to ask, or None when the interview is complete. `asked` counts new questions when `turns` has more."""
     asked = len(turns) if asked is None else asked
     if asked >= max_questions:
         return None
     prompt = (
         f"{briefing}\n\nInterview so far:\n{_transcript(turns) or '(not started)'}\n\n"
-        f"Questions asked: {asked} of at most {max_questions}. Give the next question, or done=true "
-        "if every competency has been covered."
+        f"Questions asked: {asked} of at most {max_questions}. Give the next question and the Scorecard "
+        "competency it assesses (empty for the opening question), or done=true if every competency has been covered."
     )
     answer = _structured(ctx, prompt, "interview_question", QUESTION_SCHEMA, _question)
     if answer["done"] and asked:
         return None
-    return answer["question"]
+    return Question(answer["question"], answer["competency"])
+
+
+def next_probe(ctx: RecruiterContext, briefing: str, turns: list[InterviewTurn]) -> str:
+    """A forensic follow-up on the last answer, which the Turn check found shallow."""
+    prompt = (
+        f"{briefing}\n\nInterview so far:\n{_transcript(turns)}\n\nThe candidate's last answer was vague. Ask one short "
+        "follow-up about that answer only: the specific detail it left out, such as what they personally did, how, "
+        "why they chose it, what went wrong, or the measurable result. Do not move to a new topic."
+    )
+    return _structured(ctx, prompt, "interview_probe", PROBE_SCHEMA, _probe)["question"]
+
+
+def probes_sustained(turns: list[InterviewTurn]) -> dict[str, int]:
+    """Per probed competency, the probes answered substantively."""
+    counts: dict[str, int] = {}
+    for turn in turns:
+        if turn.kind == "probe":
+            key = turn.competency or "General"
+            counts[key] = counts.get(key, 0) + (turn.check == "substantive")
+    return counts
 
 
 def assess(
@@ -124,12 +156,20 @@ def _structured(ctx: RecruiterContext, prompt: str, name: str, schema: dict, bui
 
 
 def _question(answer: dict) -> dict:
-    if not isinstance(answer.get("done"), bool) or not isinstance(answer.get("question"), str):
-        raise ValueError("expected a boolean `done` and a string `question`")
+    if not isinstance(answer.get("done"), bool) or not isinstance(answer.get("question"), str) or not isinstance(answer.get("competency"), str):
+        raise ValueError("expected a boolean `done`, a string `question` and a string `competency`")
     if not answer["done"] and not answer["question"].strip():
         raise ValueError("`question` must not be empty when `done` is false")
     return answer
 
 
+def _probe(answer: dict) -> dict:
+    if not isinstance(answer.get("question"), str) or not answer["question"].strip():
+        raise ValueError("expected a non-empty string `question`")
+    return answer
+
+
 def _transcript(turns: list[InterviewTurn]) -> str:
-    return "\n".join(f"Q{n}: {t.question}\nA{n}: {t.answer}" for n, t in enumerate(turns, start=1))
+    return "\n".join(
+        f"Q{n}{' (follow-up)' if t.kind == 'probe' else ''}: {t.question}\nA{n}: {t.answer}" for n, t in enumerate(turns, start=1)
+    )

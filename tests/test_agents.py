@@ -72,7 +72,7 @@ def test_interviewer_asks_until_the_limit_then_assesses(recruiter_context):
 
     def question(prompt):
         asked.append(prompt)
-        return {"done": False, "question": f"Question {len(asked)}?"}
+        return {"done": False, "question": f"Question {len(asked)}?", "competency": "Technical depth"}
 
     gateway = scripted_gateway(structured={
         "interview_question": question,
@@ -88,7 +88,7 @@ def test_interviewer_asks_until_the_limit_then_assesses(recruiter_context):
     turns_so_far: list[InterviewTurn] = []
 
     while (q := interviewer.next_question(ctx, briefing, turns_so_far, max_questions=3)) is not None:
-        turns_so_far.append(InterviewTurn(question=q, answer=interviewer.simulated_answer(ctx, candidate, q)))
+        turns_so_far.append(InterviewTurn(question=q.text, answer=interviewer.simulated_answer(ctx, candidate, q.text)))
     assessment = interviewer.assess(ctx, briefing, candidate["id"], job["id"], turns_so_far)
 
     assert [t.question for t in turns_so_far] == ["Question 1?", "Question 2?", "Question 3?"]
