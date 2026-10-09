@@ -5,7 +5,7 @@ An autonomous AI recruiter for **SwiftAI Recruit**, a fictional recruiting compa
 - **RAG API** (FastAPI): Search, Match and Ask over a recruiting corpus of CVs, Jobs, interview notes and Policies. It uses hybrid retrieval (dense plus sparse, fused with RRF), a reranker, and grounded answers with citations.
 - **Recruiter API** (FastAPI and LangGraph): a five-agent system (Supervisor, Sourcer, Screener, Interviewer, Compliance). It turns a hiring goal into a **Recruitment report** and reaches the RAG only through HTTP tools.
 
-The fast, typed checks inside the pipeline are the **System 1 decisions**: Route, Chunk relevance, Input guardrail and Groundedness check. Each can be made by a small LLM or by **Jev**, TypeSafe's "System One" model. The project measures how the two compare.
+The fast, typed checks inside the pipeline are the **System 1 decisions**: Route, Chunk relevance, Input guardrail, Groundedness check, Turn check and Interview signals. Each can be made by a small LLM or by **Jev**, TypeSafe's "System One" model. The project measures how the two compare.
 
 Vocabulary: `CONTEXT.md`. Design: `docs/superpowers/specs/2026-10-08-recruiter-design.md`. Decisions: `docs/adr/`. The earlier EU legal benchmark is parked in `docs/parked/`.
 
@@ -13,37 +13,37 @@ Vocabulary: `CONTEXT.md`. Design: `docs/superpowers/specs/2026-10-08-recruiter-d
 
 ### System 1 comparison: LLM decider vs Jev
 
-The LLM decider is the System 1 baseline (`anthropic/claude-haiku-4.5`, strict structured output). Jev is `typesafe/jev-1.13`. Both are called through OpenRouter with the same instructions, over 230 hand-labelled examples (`evals/data/`). Latency is end-to-end through OpenRouter.
+The LLM decider is the System 1 baseline (`anthropic/claude-haiku-4.5`, strict structured output). Jev is `typesafe/jev-1.13`. Both are called through OpenRouter with the same instructions, 230 hand-labelled examples (`evals/data/`). Latency is end-to-end through OpenRouter.
 
 | decision | implementation | n | accuracy | p50 latency (s) | p95 latency (s) | mean cost ($) |
 |---|---|---|---|---|---|---|
-| input_guardrail | llm | 60 | 95% | 1.601 | 2.041 | 0.0005196 |
-| input_guardrail | jev | 60 | 98% | 0.438 | 0.547 | 0.0000231 |
-| route | llm | 40 | 100% | 1.525 | 2.074 | 0.0003813 |
-| route | jev | 40 | 100% | 0.440 | 0.601 | 0.0000187 |
-| chunk_relevance | llm | 40 | 100% | 1.636 | 1.908 | 0.0003830 |
-| chunk_relevance | jev | 40 | 98% | 0.452 | 0.503 | 0.0000174 |
-| groundedness | llm | 30 | 100% | 1.589 | 1.852 | 0.0003423 |
-| groundedness | jev | 30 | 97% | 0.422 | 0.499 | 0.0000167 |
+| chunk_relevance | llm | 40 | 100% | 1.746 | 2.264 | 0.0003830 |
+| chunk_relevance | jev | 40 | 98% | 0.584 | 0.665 | 0.0000174 |
+| groundedness | llm | 30 | 100% | 1.779 | 2.190 | 0.0003421 |
+| groundedness | jev | 30 | 97% | 0.568 | 0.667 | 0.0000167 |
+| input_guardrail | llm | 60 | 97% | 1.839 | 2.322 | 0.0005192 |
+| input_guardrail | jev | 60 | 98% | 0.580 | 0.688 | 0.0000231 |
+| route | llm | 40 | 100% | 1.780 | 2.306 | 0.0003813 |
+| route | jev | 40 | 100% | 0.586 | 0.649 | 0.0000187 |
 | turn_check | llm | 60 | 98% | 1.815 | 2.225 | 0.0007266 |
 | turn_check | jev | 60 | 95% | 0.570 | 0.634 | 0.0000311 |
 
 | decision | Jev speed-up (p50) | Jev cost per decision | accuracy gap (Jev − LLM) |
 |---|---|---|---|
-| input_guardrail | 3.7× faster | 22× cheaper | +3 pts |
-| route | 3.5× faster | 20× cheaper | +0 pts |
-| chunk_relevance | 3.6× faster | 22× cheaper | −3 pts |
-| groundedness | 3.8× faster | 20× cheaper | −3 pts |
+| chunk_relevance | 3.0× faster | 22× cheaper | −3 pts |
+| groundedness | 3.1× faster | 20× cheaper | −3 pts |
+| input_guardrail | 3.2× faster | 22× cheaper | +2 pts |
+| route | 3.0× faster | 20× cheaper | +0 pts |
 | turn_check | 3.2× faster | 23× cheaper | −3 pts |
 
-On these sets, Jev matches the LLM decider within 3 points on every decision, about 3.5× faster and about 20× cheaper per decision.
+On these sets, Jev matches the LLM decider within 3 points on every decision, about 3× faster and about 20× cheaper per decision.
 
 Caveats on reading these numbers:
 
-- **Small samples.** A single example moves accuracy by 2–3 points, and repeated runs vary by that much (the LLM guardrail scored 97% on an earlier run).
+- **Small samples.** A single example moves accuracy by 2–3 points, and repeated runs vary by that much (the LLM guardrail scored 95% on an earlier run).
 - **Hardest guardrail case.** Both deciders allowed one indirect proxy: "must live within 2 km of the office even though the role is hybrid".
-- **Turn check.** Rows for `turn_check` come from `results/system1-2026-10-09/` (the other rows are from the earlier run). Jev missed no prompt injections and reprompted no real answers; the LLM decider reprompted or redirected one real answer.
-- **Raw files:** `results/system1-2026-10-08/` and `results/system1-2026-10-09/`. Re-run with `uv run python -m agentic_jev_rag.evals.system1`.
+- **Turn check.** Jev missed no prompt injections and reprompted no real answers; the LLM decider reprompted or redirected one real answer.
+- **Raw files:** `results/system1-2026-10-09/`. Re-run with `uv run python -m agentic_jev_rag.evals.system1`.
 
 ### Match evaluation
 

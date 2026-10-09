@@ -116,7 +116,7 @@ The System 1 decisions are:
 - **Interview signals**: for each scored answer in a live interview, the evidence it shows for each Scorecard competency and whether it is consistent with, adds to, or contradicts the Dossier. Computed alongside the next question; advisory input to the assessment.
 
 **System 1 decider**:
-The component that makes the four System 1 decisions. It has two implementations: the LLM decider (the System 1 baseline) and the Jev decider. Everything else is the same whichever one runs.
+The component that makes the System 1 decisions. It has two implementations: the LLM decider (the System 1 baseline) and the Jev decider. Everything else is the same whichever one runs.
 
 **System 2 model**:
 The generative LLM that writes answers and drives the agents.

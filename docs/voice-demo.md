@@ -4,7 +4,7 @@ A live voice interview with SwiftAI's AI Interviewer, from the LiveKit Agents Pl
 
 ## Run it
 
-1. `docker compose up -d qdrant rag-api recruiter-api` (index the corpus first if you have not: `docker compose --profile setup run --rm ingest`).
+1. `docker compose up -d --build qdrant rag-api recruiter-api` (index the corpus first if you have not: `docker compose --profile setup run --rm ingest`). When the corpus changes, re-index it with that same ingest command and restart rag-api (`docker compose restart rag-api`).
 2. `uv sync --group voice`, then once: `uv run --group voice python -m agentic_jev_rag.voice download-files`.
 3. `uv run --group voice python -m agentic_jev_rag.voice dev`. Wait for the worker to register with LiveKit Cloud.
 4. Open https://agents-playground.livekit.io, connect to your LiveKit Cloud project, and join a room. The worker joins and starts the interview for the default Candidate and Job in `configs/recruiter.toml` (`[voice]`). To choose others, set participant attributes `candidate_id` and `job_id` before connecting.
