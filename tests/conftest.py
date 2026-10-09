@@ -35,3 +35,22 @@ def config(qdrant: QdrantClient):
     for c in qdrant.get_collections().collections:
         if c.name.startswith(prefix):
             qdrant.delete_collection(c.name)
+
+
+FIXTURE_CORPUS = __import__("pathlib").Path(__file__).parent / "fixtures" / "corpus"
+
+
+@pytest.fixture(scope="session")
+def fixture_documents():
+    from agentic_jev_rag.corpus.documents import load_corpus
+
+    return load_corpus(FIXTURE_CORPUS)
+
+
+@pytest.fixture(scope="session")
+def indexed(config, qdrant, fixture_documents):
+    """The fixture corpus indexed once per session with the fake gateway's embeddings."""
+    from agentic_jev_rag.gateway import FakeModelGateway
+    from agentic_jev_rag.rag.index import index_corpus
+
+    return index_corpus(fixture_documents, config, FakeModelGateway(), qdrant)
