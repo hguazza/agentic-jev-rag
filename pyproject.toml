@@ -22,6 +22,10 @@ build-backend = "hatchling.build"
 dev = [
     "pytest>=8",
 ]
+# The LiveKit voice worker (ADR 0012). Not in the default install or the Docker image: uv sync --group voice
+voice = [
+    "livekit-agents[openai,silero,turn-detector]==1.8.3",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
