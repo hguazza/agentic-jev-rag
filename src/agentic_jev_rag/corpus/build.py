@@ -62,7 +62,7 @@ def build_corpus(
     locations = sorted({p["location"] for p in postings})
 
     with ThreadPoolExecutor(WORKERS) as pool:
-        profiles = list(pool.map(lambda r: _profile(gateway, extraction_model, r["text"]), resumes))
+        profiles = list(pool.map(lambda r: extract_profile(gateway, extraction_model, r["text"]), resumes))
         rewritten = list(pool.map(lambda pc: _rewrite_job(gateway, system_2_model, *pc), zip(postings, clients)))
 
     candidates = [
@@ -126,7 +126,7 @@ def build_corpus(
     return candidates + jobs + notes
 
 
-def _profile(gateway: ModelGateway, model: str, text: str) -> dict:
+def extract_profile(gateway: ModelGateway, model: str, text: str) -> dict:
     prompt = (
         "Extract from this CV: a short professional headline, total years of professional experience (estimate "
         "from dates; a number), and up to 12 job-related skills. Never extract personal characteristics.\n\n"
