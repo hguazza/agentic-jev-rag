@@ -7,7 +7,8 @@ from fastapi.testclient import TestClient
 
 from agentic_jev_rag.gateway import ToolCall
 from agentic_jev_rag.recruiter.api import create_recruiter_app
-from tests.rag_scripts import by_agent, scripted_gateway
+from tests.interview_scripts import interview_gateway
+from tests.rag_scripts import TURN_OUTCOMES, by_agent, scripted_gateway
 
 ADVANCE = {
     "decision": "advance",
@@ -217,3 +218,18 @@ def test_a_reply_retried_after_a_502_does_not_record_the_retry_message_as_anothe
     assert failed.status_code == 502
     assert retried.status_code == 200 and retried.json()["question"] == "Tell me about question 2."
     assert [t["answer"] for t in done.json()["assessment"]["turns"]] == ["I partitioned Kafka topics.", "I owned on-call."]
+
+
+def test_a_failed_turn_check_is_a_502_and_replying_again_continues_without_duplicating(client):
+    failures = iter([None])  # the first Turn check returns invalid output
+
+    api = client(interview_gateway(turn=lambda answer: next(failures, TURN_OUTCOMES["substantive"])))
+    started = api.post("/interviews", json={"candidate_id": "C-001", "job_id": "J-001"}).json()
+    url = f"/interviews/{started['interview_id']}/reply"
+
+    assert api.post(url, json={"message": "I partitioned Kafka topics."}).status_code == 502
+    retried = api.post(url, json={"message": "I partitioned Kafka topics."}).json()
+    done = api.post(url, json={"message": "I owned on-call."}).json()
+
+    assert retried["question"] == "Tell me about question 2." and retried["question_kind"] == "question"
+    assert [t["answer"] for t in done["assessment"]["turns"]] == ["I partitioned Kafka topics.", "I owned on-call."]

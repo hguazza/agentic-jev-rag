@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from agentic_jev_rag.recruiter import prompts
 from agentic_jev_rag.recruiter.context import RecruiterContext
-from agentic_jev_rag.recruiter.schemas import CompetencyScore, InterviewAssessment, InterviewTurn, json_schema
+from agentic_jev_rag.recruiter.schemas import CompetencyScore, InterviewAssessment, InterviewTurn, RedFlag, json_schema
 
 QUESTION_SCHEMA = {
     "type": "object",
@@ -62,23 +62,26 @@ def dossier_text(candidate: dict) -> str:
     return f"CV:\n{candidate['text']}"
 
 
-def next_question(ctx: RecruiterContext, briefing: str, turns: list[InterviewTurn], max_questions: int = 4) -> str | None:
-    """The next question to ask, or None when the interview is complete."""
-    if len(turns) >= max_questions:
+def next_question(
+    ctx: RecruiterContext, briefing: str, turns: list[InterviewTurn], max_questions: int = 4, *, asked: int | None = None
+) -> str | None:
+    """The next question to ask, or None when the interview is complete. `asked` counts new questions when `turns` has more."""
+    asked = len(turns) if asked is None else asked
+    if asked >= max_questions:
         return None
     prompt = (
         f"{briefing}\n\nInterview so far:\n{_transcript(turns) or '(not started)'}\n\n"
-        f"Questions asked: {len(turns)} of at most {max_questions}. Give the next question, or done=true "
+        f"Questions asked: {asked} of at most {max_questions}. Give the next question, or done=true "
         "if every competency has been covered."
     )
     answer = _structured(ctx, prompt, "interview_question", QUESTION_SCHEMA, _question)
-    if answer["done"] and turns:
+    if answer["done"] and asked:
         return None
     return answer["question"]
 
 
 def assess(
-    ctx: RecruiterContext, briefing: str, candidate_id: str, job_id: str, turns: list[InterviewTurn]
+    ctx: RecruiterContext, briefing: str, candidate_id: str, job_id: str, turns: list[InterviewTurn], *, red_flags: list[RedFlag] = ()
 ) -> InterviewAssessment:
     prompt = (
         f"{briefing}\n\nInterview transcript:\n{_transcript(turns)}\n\n"
@@ -87,7 +90,7 @@ def assess(
     )
     return _structured(
         ctx, prompt, "interview_assessment", ASSESSMENT_SCHEMA,
-        lambda answer: InterviewAssessment(candidate_id=candidate_id, job_id=job_id, turns=turns, **answer),
+        lambda answer: InterviewAssessment(candidate_id=candidate_id, job_id=job_id, turns=turns, red_flags=list(red_flags), **answer),
     )
 
 

@@ -50,4 +50,10 @@ class InterviewState(BaseModel):
 
     interview_id: str = Field(description="Id to reply to; keep it for the whole interview.", examples=["47898414c2a94bf3a1d0f5e2b6c7d8e9"])
     question: str | None = Field(description="The next question for the Candidate; null when the interview is over.")
+    question_kind: Literal["question", "probe", "reprompt", "redirect"] | None = Field(
+        default=None,
+        description="How to put the question: a new `question`, a `probe` (follow-up on a vague answer), a `reprompt` "
+        "(ask again: the reply was not understood) or a `redirect` (the reply tried to instruct the AI). Null when the "
+        "interview is over.",
+    )
     assessment: InterviewAssessment | None = Field(description="The Interviewer's assessment; set once the interview is over.")

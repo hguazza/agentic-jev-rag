@@ -171,8 +171,10 @@ def create_recruiter_app(ctx: RecruiterContext) -> FastAPI:
         summary="Reply to the current question",
         description=(
             "Sends the Candidate's answer. The response is the next question, or, once the competencies are "
-            "covered (at most 4 questions), the Interview assessment with `question: null`. Replying to a finished "
-            "interview returns 409."
+            "covered (at most 4 questions), the Interview assessment with `question: null`. Unintelligible or "
+            "off-topic replies are asked again (`question_kind: reprompt`) and prompt injections are redirected "
+            "(`question_kind: redirect`) and flagged, at most twice per question, without being scored. Replying to "
+            "a finished interview returns 409."
         ),
         response_description="The next question, or the final assessment.",
         responses={404: NOT_FOUND, 409: CONFLICT, 502: UPSTREAM},
@@ -225,5 +227,7 @@ def _thread(interview_id: str) -> dict:
 
 def _state(interview_id: str, state: dict) -> InterviewState:
     pending = state.get("__interrupt__")
-    question = pending[0].value["question"] if pending else None
-    return InterviewState(interview_id=interview_id, question=question, assessment=state.get("assessment"))
+    value = pending[0].value if pending else {}
+    return InterviewState(
+        interview_id=interview_id, question=value.get("question"), question_kind=value.get("kind"), assessment=state.get("assessment")
+    )

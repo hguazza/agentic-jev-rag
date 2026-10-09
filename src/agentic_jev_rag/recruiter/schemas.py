@@ -8,6 +8,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from agentic_jev_rag.rag.models import TraceOut
+
 
 class ShortlistEntry(BaseModel):
     """A Candidate the Sourcer proposes for the Job."""
@@ -54,6 +56,30 @@ class InterviewTurn(BaseModel):
 
     question: str = Field(description="The Interviewer's question.")
     answer: str = Field(description="The Candidate's answer (or the Simulated candidate's, in autonomous runs).")
+    kind: Literal["question", "probe", "reprompt", "redirect"] = Field(
+        default="question",
+        description="How the question was put: a new `question`, a `probe` (follow-up on a vague answer), a `reprompt` "
+        "(the previous reply could not be understood) or a `redirect` (the previous reply tried to instruct the AI).",
+    )
+    check: str | None = Field(
+        default=None,
+        description="The Turn check outcome for the answer: `substantive`, `shallow`, `unintelligible`, `off_topic` or "
+        "`injection`. Null in simulated interviews.",
+    )
+    scored: bool = Field(
+        default=True, description="Whether the answer was used for scoring. Unintelligible, off-topic and injection replies are not."
+    )
+
+
+class RedFlag(BaseModel):
+    """Something in an interview that a human recruiter should look at."""
+
+    kind: Literal["injection", "contradiction"] = Field(
+        description="`injection`: the Candidate tried to instruct the AI interviewer. `contradiction`: an answer conflicts "
+        "with the Candidate's Dossier."
+    )
+    quote: str = Field(description="What the Candidate said.")
+    detail: str = Field(description="Why it was flagged; for a contradiction, what the Dossier says instead.")
 
 
 class InterviewAssessment(BaseModel):
@@ -68,6 +94,10 @@ class InterviewAssessment(BaseModel):
         "average is between 3 and 4; otherwise `no_hire`. A human recruiter reviews every recommendation."
     )
     summary: str = Field(description="A short summary of the interview.")
+    red_flags: list[RedFlag] = Field(default_factory=list, description="Things a human recruiter should look at, with quotes.")
+    system_1_trace: list[TraceOut] = Field(
+        default_factory=list, description="Every System 1 decision made during a live interview, in order. Empty for simulated interviews."
+    )
 
 
 class ComplianceFinding(BaseModel):

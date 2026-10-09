@@ -4,7 +4,7 @@ import re
 
 from langgraph.types import Command
 
-from tests.rag_scripts import scripted_gateway
+from tests.rag_scripts import TURN_OUTCOMES, scripted_gateway
 
 ASSESSMENT = {
     "scores": [{"competency": "System design", "score": 4, "evidence_chunk_ids": [], "rationale": "Partitioned topics by order id."}],
@@ -46,3 +46,15 @@ def pending(state):
 def prompts_for(gateway, schema_name):
     """Prompts of the structured completions made with this response-schema name, in order."""
     return [p["prompt"] for kind, _, p in gateway.calls if kind == "complete" and p["schema"] and p["schema"][0] == schema_name]
+
+
+def checking(rules):
+    """A Turn check script: the label of the first rule whose text appears in the answer, else substantive."""
+
+    def outcome(answer):
+        for needle, label in rules.items():
+            if needle in answer:
+                return TURN_OUTCOMES[label]
+        return TURN_OUTCOMES["substantive"]
+
+    return outcome

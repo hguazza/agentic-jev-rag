@@ -94,12 +94,13 @@ The Recruiter's final output for a goal: the shortlist, Screening verdicts, Inte
 A fast, typed judgement inside the pipeline that does not generate prose.
 _Avoid_: classification step, fast path
 
-The four System 1 decisions are:
+The System 1 decisions are:
 
 - **Route**: which Collection(s) to search for a question.
 - **Chunk relevance**: whether a retrieved chunk is kept as Evidence.
 - **Input guardrail**: whether a request is refused: discriminatory (selects or excludes people by a protected characteristic) or out of scope.
 - **Groundedness check**: whether an answer or verdict is supported by its Evidence.
+- **Turn check**: in a live interview, whether a reply is an answer, unintelligible, off-topic or a prompt injection, and whether an answer is substantive or shallow. One call, before the System 2 model is asked anything.
 
 **System 1 decider**:
 The component that makes the four System 1 decisions. It has two implementations: the LLM decider (the System 1 baseline) and the Jev decider. Everything else is the same whichever one runs.
