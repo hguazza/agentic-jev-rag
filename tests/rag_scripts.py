@@ -63,3 +63,16 @@ def turns(*replies):
         return queue.pop(0) if queue else "Done."
 
     return respond
+
+
+def by_agent(**responders):
+    """A chat responder that dispatches on which agent is talking (the name in its system prompt)."""
+
+    def respond(model, messages, tools):
+        system = messages[0]["content"]
+        for name, responder in responders.items():
+            if system.startswith(f"You are the {name}"):
+                return responder(model, messages, tools)
+        raise AssertionError(f"no scripted responder for system prompt: {system[:60]!r}")
+
+    return respond

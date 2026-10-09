@@ -121,3 +121,21 @@ def test_rag_client_and_tools_call_the_rag_api(indexed, config, qdrant, fixture_
         raise AssertionError("expected RagError")
     except RagError as error:
         assert "404" in str(error)
+
+
+def test_a_submission_rejected_by_the_submit_tools_validator_is_sent_back_for_correction():
+    def validate(answer):
+        if not answer.strip():
+            raise ValueError("answer must not be blank")
+        return {"answer": answer.upper()}
+
+    strict = Tool("submit_answer", "Submit", SUBMIT.parameters, validate)
+    gateway = FakeModelGateway(chat_responder=turns(
+        [ToolCall("1", "submit_answer", {"answer": " "})],
+        [ToolCall("2", "submit_answer", {"answer": "ok"})],
+    ))
+
+    result = run_agent(gateway, "m", "s", "t", [], strict)
+
+    assert result.submitted == {"answer": "OK"}
+    assert "must not be blank" in next(m for m in result.transcript if m["role"] == "tool")["content"]

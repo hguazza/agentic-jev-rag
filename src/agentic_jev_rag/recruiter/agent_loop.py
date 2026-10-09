@@ -66,11 +66,16 @@ def run_agent(
         for call in turn.tool_calls:
             if call.name == submit.name:
                 missing = [k for k in submit.parameters.get("required", []) if k not in call.arguments]
-                if not missing:
-                    messages.append(_tool_message(call.id, {"status": "submitted"}))
-                    return result("submitted", submitted=call.arguments, steps=step)
-                messages.append(_tool_message(call.id, {"error": f"missing required fields: {missing}"}))
-                continue
+                if missing:
+                    messages.append(_tool_message(call.id, {"error": f"missing required fields: {missing}"}))
+                    continue
+                try:
+                    accepted = submit.fn(**call.arguments)  # the submit tool validates the submission
+                except Exception as error:
+                    messages.append(_tool_message(call.id, {"error": f"invalid submission: {error}"}))
+                    continue
+                messages.append(_tool_message(call.id, {"status": "submitted"}))
+                return result("submitted", submitted=accepted, steps=step)
             messages.append(_tool_message(call.id, _run_tool(by_name.get(call.name), call.name, call.arguments)))
 
     return result("step_limit", steps=max_steps)

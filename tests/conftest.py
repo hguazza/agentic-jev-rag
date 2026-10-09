@@ -54,3 +54,25 @@ def indexed(config, qdrant, fixture_documents):
     from agentic_jev_rag.rag.index import index_corpus
 
     return index_corpus(fixture_documents, config, FakeModelGateway(), qdrant)
+
+
+TODAY = __import__("datetime").date(2026, 10, 8)
+
+
+@pytest.fixture
+def recruiter_context(indexed, config, qdrant, fixture_documents):
+    """Builds a RecruiterContext whose RAG API runs in-process over the indexed fixture corpus."""
+    from fastapi.testclient import TestClient
+
+    from agentic_jev_rag.rag.api import create_rag_app
+    from agentic_jev_rag.rag.service import RagService
+    from agentic_jev_rag.recruiter.context import RecruiterContext
+    from agentic_jev_rag.recruiter.rag_client import RagClient
+    from tests.rag_scripts import scripted_gateway
+
+    def make(gateway, *, rag_gateway=None, system_1="llm"):
+        service = RagService(config, rag_gateway or scripted_gateway(), qdrant, fixture_documents, today=lambda: TODAY)
+        rag = RagClient("http://rag", http=TestClient(create_rag_app(service)))
+        return RecruiterContext(config=config, gateway=gateway, rag=rag, system_1=system_1, today=lambda: TODAY)
+
+    return make
