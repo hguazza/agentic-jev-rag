@@ -8,6 +8,12 @@ from agentic_jev_rag.system1.prompts import (
     RELEVANCE_INSTRUCTIONS,
     ROUTE_CRITERIA,
     ROUTE_INSTRUCTIONS,
+    TURN_CONTEXT,
+    TURN_DEPTH_CRITERIA,
+    TURN_DEPTH_INSTRUCTIONS,
+    TURN_INJECTION_INSTRUCTIONS,
+    TURN_INTELLIGIBILITY_CRITERIA,
+    TURN_INTELLIGIBILITY_INSTRUCTIONS,
 )
 from agentic_jev_rag.system1.types import (
     GroundednessDecision,
@@ -16,6 +22,8 @@ from agentic_jev_rag.system1.types import (
     RouteDecision,
     System1Error,
     System1TraceEntry,
+    TurnCheckDecision,
+    turn_label,
 )
 
 THRESHOLD = 0.5
@@ -65,6 +73,25 @@ class JevDecider:
         score = self._noul(decisions, "grounded")
         grounded = score >= THRESHOLD
         return GroundednessDecision(grounded, score, self._trace("groundedness", "grounded" if grounded else "ungrounded", decisions))
+
+    def turn_check(self, question: str, answer: str) -> TurnCheckDecision:
+        decisions = self._decide(
+            {"question": question, "answer": answer},
+            {
+                "intelligibility": {
+                    "type": "choice",
+                    "instructions": f"{TURN_CONTEXT} {TURN_INTELLIGIBILITY_INSTRUCTIONS}",
+                    "criteria": TURN_INTELLIGIBILITY_CRITERIA,
+                },
+                "injection": {"type": "noul", "instructions": f"{TURN_CONTEXT} {TURN_INJECTION_INSTRUCTIONS}"},
+                "depth": {"type": "choice", "instructions": f"{TURN_CONTEXT} {TURN_DEPTH_INSTRUCTIONS}", "criteria": TURN_DEPTH_CRITERIA},
+            },
+        )
+        intelligibility = self._choice(decisions, "intelligibility", TURN_INTELLIGIBILITY_CRITERIA)
+        injection = self._noul(decisions, "injection")
+        depth = self._choice(decisions, "depth", TURN_DEPTH_CRITERIA)
+        trace = self._trace("turn_check", turn_label(intelligibility, injection, depth), decisions)
+        return TurnCheckDecision(intelligibility, injection, depth, trace)
 
     def _decide(self, state: dict, questions: dict) -> Decisions:
         return self._gateway.decide(self._model, state, questions)

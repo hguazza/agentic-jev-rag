@@ -12,11 +12,13 @@ from agentic_jev_rag.system1.types import (
     System1Decider,
     System1Error,
     System1TraceEntry,
+    TurnCheckDecision,
 )
 
 __all__ = [
     "GroundednessDecision", "GuardrailDecision", "JevDecider", "LlmDecider", "RelevanceDecision",
-    "RouteDecision", "System1Decider", "System1Error", "System1TraceEntry", "make_deciders",
+    "RouteDecision", "System1Decider", "System1Error", "System1TraceEntry", "TurnCheckDecision",
+    "make_deciders",
 ]
 
 

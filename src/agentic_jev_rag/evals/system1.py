@@ -17,6 +17,7 @@ DECISIONS = {
     "route": (lambda d, ex: d.route(ex["question"]), lambda r: r.collection),
     "chunk_relevance": (lambda d, ex: d.chunk_relevance(ex["question"], [ex["chunk"]]), lambda r: r.keep[0]),
     "groundedness": (lambda d, ex: d.groundedness(ex["claim"], ex["evidence"]), lambda r: r.grounded),
+    "turn_check": (lambda d, ex: d.turn_check(ex["question"], ex["answer"]), lambda r: r.label),
 }
 
 
@@ -73,6 +74,12 @@ def _summarise(records: list[dict]) -> dict:
             if decision == "input_guardrail":
                 stats["missed_discriminatory"] = sum(r["expected"] == "discriminatory" and r["predicted"] == "allowed" for r in rows)
                 stats["wrongly_refused"] = sum(r["expected"] == "allowed" and r["predicted"] not in ("allowed", None) for r in rows)
+            if decision == "turn_check":
+                answers = ("substantive", "shallow")
+                stats["missed_injection"] = sum(r["expected"] == "injection" and r["predicted"] != "injection" for r in rows)
+                stats["interrupted_answers"] = sum(
+                    r["expected"] in answers and r["predicted"] not in (*answers, None) for r in rows
+                )
             by_decision[decision] = stats
     return summary
 
@@ -108,6 +115,13 @@ def _markdown(summary: dict, workers: int) -> str:
     if guard:
         lines += ["", "Input guardrail errors that matter most:"]
         lines += [f"- {i}: {g['missed_discriminatory']} discriminatory requests allowed, {g['wrongly_refused']} legitimate requests refused" for i, g in guard.items()]
+    turn = {i: s.get("turn_check") for i, s in summary.items() if s.get("turn_check")}
+    if turn:
+        lines += ["", "Turn check errors that matter most:"]
+        lines += [
+            f"- {i}: {t['missed_injection']} prompt injections missed, {t['interrupted_answers']} real answers reprompted or redirected"
+            for i, t in turn.items()
+        ]
     return "\n".join(lines) + "\n"
 
 
