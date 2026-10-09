@@ -25,6 +25,9 @@ from agentic_jev_rag.voice.script import REFUSAL, SORRY, summary_text
 log = logging.getLogger(__name__)
 
 RESULTS_DIR = Path("results") / "voice-interviews"
+# The Voice host speaks a question or a short acknowledgement. Capped so OpenRouter does not reserve credit for the
+# model's whole output window and refuse the call when credit runs low (the agent then says nothing).
+VOICE_HOST_MAX_TOKENS = 1024
 
 server = AgentServer()
 
@@ -32,7 +35,12 @@ server = AgentServer()
 def build_session(config: Config) -> AgentSession:
     return AgentSession(
         stt=inference.STT(config.voice.stt, language="en"),
-        llm=openai.LLM(model=config.models.voice_host, base_url=BASE_URL, api_key=os.environ["OPEN_ROUTER_API_TOKEN"]),
+        llm=openai.LLM(
+            model=config.models.voice_host,
+            base_url=BASE_URL,
+            api_key=os.environ["OPEN_ROUTER_API_TOKEN"],
+            max_completion_tokens=VOICE_HOST_MAX_TOKENS,
+        ),
         tts=inference.TTS(config.voice.tts),
         vad=silero.VAD.load(),
         # Candidates pause to think: when the turn detector is unsure, wait up to 5 s of silence.
