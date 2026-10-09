@@ -67,9 +67,9 @@ def load_config(path: Path | None = None) -> Config:
         voice = replace(voice, recruiter_url=url)
     if "collections" in data:
         data["collections"] = tuple(data["collections"])
-    for variable, field in ENVIRONMENT_OVERRIDES.items():
+    for variable, key in ENVIRONMENT_OVERRIDES.items():
         if value := os.environ.get(variable):
-            data[field] = value
+            data[key] = value
     if data.get("system_1", "llm") not in ("llm", "jev"):
         raise ValueError(f"system_1 must be 'llm' or 'jev', got {data['system_1']!r}")
     return Config(models=models, voice=voice, **data)

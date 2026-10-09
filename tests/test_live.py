@@ -88,7 +88,7 @@ def test_a_real_recruitment_run_produces_a_compliant_report(gateway, service):
 
 
 def test_a_live_interview_reprompts_redirects_and_probes_on_jev(gateway, service):
-    """Through the Recruiter app with real models and Jev: gibberish, an injection, a vague answer, a real one."""
+    """Through the Recruiter app with real models and Jev: gibberish, an injection, a vague answer, a strong one."""
     from agentic_jev_rag.recruiter.api import create_recruiter_app
 
     rag = RagClient("http://rag", http=TestClient(create_rag_app(service)))

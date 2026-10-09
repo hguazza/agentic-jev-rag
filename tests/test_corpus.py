@@ -1,7 +1,6 @@
 """Corpus records: loading every Collection from the committed corpus layout."""
 
 import json
-import json as _json
 from datetime import date
 from pathlib import Path
 
@@ -76,7 +75,7 @@ def test_dossiers_are_added_to_the_named_candidates_only(tmp_path):
 
     def complete(model, prompt, system, schema):
         prompts.append(prompt)
-        return _json.dumps(DOSSIER)
+        return json.dumps(DOSSIER)
 
     add_dossiers(path, ["C-1"], FakeModelGateway(complete_responder=complete), "fake/s2", discrepancy_ids=["C-1"])
 

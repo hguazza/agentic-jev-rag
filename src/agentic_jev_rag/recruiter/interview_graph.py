@@ -86,6 +86,7 @@ def build_interview_graph(ctx: RecruiterContext, *, max_questions: int = 4):
             return ["probe", "observe"]
         return ["ask", "observe"]
 
+    # Branches in one superstep (ask or probe, and observe) feed route_next and must write disjoint state keys.
     def observe(state: InterviewGraphState) -> dict:
         last = state["turns"][-1]
         if not last.scored:
