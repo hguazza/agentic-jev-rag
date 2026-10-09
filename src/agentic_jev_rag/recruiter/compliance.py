@@ -25,7 +25,7 @@ def intake(ctx: RecruiterContext, goal: str) -> tuple[ComplianceFinding, list[Sy
 def review(
     ctx: RecruiterContext, shortlist: Shortlist, verdicts: list[ScreeningVerdict]
 ) -> tuple[list[ComplianceFinding], list[System1TraceEntry]]:
-    findings = [_consent(ctx, entry.candidate_id) for entry in shortlist.candidates]
+    findings = [consent_finding(ctx, entry.candidate_id) for entry in shortlist.candidates]
     trace: list[System1TraceEntry] = []
     for verdict in verdicts:
         finding, entry = _groundedness(ctx, verdict)
@@ -45,7 +45,7 @@ def review(
     return findings, trace
 
 
-def _consent(ctx: RecruiterContext, candidate_id: str) -> ComplianceFinding:
+def consent_finding(ctx: RecruiterContext, candidate_id: str) -> ComplianceFinding:
     try:
         until = ctx.rag.document(candidate_id)["metadata"].get("consent_until")
     except RagError:
