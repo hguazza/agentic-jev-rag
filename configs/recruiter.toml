@@ -20,3 +20,17 @@ embedding_model = "baai/bge-m3"
 reranker = "cohere/rerank-4-fast"
 # Pinned so Jev's behaviour stays stable across runs.
 jev_model = "typesafe/jev-1.13"
+# Speaks for the Interviewer in voice interviews; fast and good at tool calls (ADR 0012).
+voice_host = "anthropic/claude-haiku-4.5"
+
+[voice]
+# LiveKit Inference model ids for speech (ADR 0012).
+stt = "deepgram/nova-3"
+tts = "cartesia/sonic-3"
+# Interview held when the Playground participant sets no candidate_id / job_id attributes.
+default_candidate_id = "C-0040"
+default_job_id = "J-037"
+recruiter_url = "http://localhost:8001"
+# Per question: reprompts or redirects before moving on. Per topic: forensic follow-ups.
+max_reprompts = 2
+max_probes_per_topic = 2

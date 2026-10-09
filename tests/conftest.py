@@ -15,6 +15,7 @@ FAKE_MODELS = ModelConfig(
     embedding_model="fake/embedding",
     reranker="fake/reranker",
     jev_model="fake/jev",
+    voice_host="fake/voice-host",
 )
 
 
