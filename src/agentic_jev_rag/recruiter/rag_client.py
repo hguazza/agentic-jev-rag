@@ -15,8 +15,8 @@ class RagClient:
     def search(self, query: str, collections: list[str] | None = None, filters: dict | None = None, top_k: int = 8) -> dict:
         return self._post("/search", {"query": query, "collections": collections, "filters": filters or {}, "top_k": top_k})
 
-    def match(self, job_id: str, top_k: int = 5) -> dict:
-        return self._post("/match", {"job_id": job_id, "top_k": top_k})
+    def match(self, job_id: str, top_k: int = 5, filters: dict | None = None) -> dict:
+        return self._post("/match", {"job_id": job_id, "top_k": top_k, "filters": filters or {}})
 
     def ask(self, question: str, collections: list[str] | None = None, filters: dict | None = None, system_1: str | None = None) -> dict:
         return self._post("/ask", {"question": question, "collections": collections, "filters": filters or {}, "system_1": system_1})
