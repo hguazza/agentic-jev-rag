@@ -191,3 +191,30 @@ class FakeModelGateway:
             vector[int.from_bytes(digest) % self.dimensions] += 1.0
         norm = math.sqrt(sum(v * v for v in vector)) or 1.0
         return [v / norm for v in vector]
+
+
+class CostMeter:
+    """Wraps a gateway and totals the reported cost of every call made through it."""
+
+    def __init__(self, gateway: ModelGateway):
+        self._gateway = gateway
+        self.cost_usd = 0.0
+
+    def _add(self, result):
+        self.cost_usd += result.cost_usd
+        return result
+
+    def complete(self, model, prompt, *, system=None, response_schema=None) -> Completion:
+        return self._add(self._gateway.complete(model, prompt, system=system, response_schema=response_schema))
+
+    def chat(self, model, messages, *, tools=None) -> ChatResult:
+        return self._add(self._gateway.chat(model, messages, tools=tools))
+
+    def embed(self, model, texts) -> Embeddings:
+        return self._add(self._gateway.embed(model, texts))
+
+    def rerank(self, model, query, documents) -> RerankResult:
+        return self._add(self._gateway.rerank(model, query, documents))
+
+    def decide(self, model, state, questions) -> Decisions:
+        return self._add(self._gateway.decide(model, state, questions))
