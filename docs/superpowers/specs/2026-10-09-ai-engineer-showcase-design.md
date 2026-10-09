@@ -16,6 +16,7 @@ Success: `results/ai-engineer-showcase/report.md` shows a leaderboard of all 13 
 - **The Screener filters, as in the real pipeline.** Only fake Candidates the Screener advances are interviewed. The author is interviewed regardless, and their Screening verdict is reported honestly beside it.
 - **Same judge, enforced.** Every Interview assessment records the config it was graded under; the runner refuses to import a voice interview graded under a different config.
 - **Simulated candidates play a Persona.** Without one, every Simulated candidate answers well and the comparison flatters everyone.
+- **Personas stay out of the corpus.** Qdrant stores each document's metadata in every chunk and Search returns it to the Screener, so a Persona in the metadata would tell the Screener who is a bluffer. Personas live only in `corpus/ai_pool/personas.toml`, and all 13 pool Candidates, the author included, have `source: "ai_pool"`.
 - **Out of scope**: deployment (its own spec), a web UI for the comparison, runs on both System 1 deciders (the configured one runs and the report names it), repeated runs per Candidate, changes to the voice spec beyond what it plans.
 
 ## Scorecard: `ai_engineering`
@@ -47,17 +48,17 @@ A new occupation. `corpus/policies/scorecards.md` gains `## AI engineering`, par
 **Generation**: `uv run python -m agentic_jev_rag.corpus.ai_pool --seed 7`. For each persona, the System 2 model writes:
 
 - a plain-text CV in the layout of the existing Candidates (summary, highlights, dated experience, education);
-- a Dossier in the voice spec's shape, `metadata.dossier = {"cover_letter", "linkedin": {"headline", "about", "positions"}}`, consistent with the CV for truthful personas and with deliberate discrepancies (inflated titles, dates or scope) for bluffers, so the contradiction signal has something to catch.
+- a Dossier in the voice spec's shape, `metadata.dossier = {"cover_letter", "linkedin": {"headline", "about", "positions"}}`, added with the voice spec's own `corpus.dossier` once it is merged: consistent with the CV for truthful personas, and with its deliberate discrepancies (a different employer, different years) for the two bluffers, so the contradiction signal has something to catch.
 
-Profile metadata follows the existing Candidates: `name` and `consent_until` from `corpus.synthetic` (seeded), `headline` and `skills` extracted as in `build._profile`, `occupation: "ai_engineering"`, `years_experience` and `location` from the persona, `source: "synthetic:ai_pool"`. The Persona itself is stored as `metadata.persona`. It is read only by the Simulated candidate: it is not embedded, and Match and the Screener never see it.
+Profile metadata follows the existing Candidates: `name` from `corpus.synthetic` (seeded, unique), `consent_until` 6 to 24 months ahead (always valid), `headline` and `skills` extracted as in `build.extract_profile`, `occupation: "ai_engineering"`, `years_experience` and `location` from the persona, `source: "ai_pool"`. No Persona fields.
 
-**The author, C-0213**: hand-written sources in `corpus/ai_pool/henrique/` (`cv.md`, `cover_letter.md`, `linkedin.md`), converted to the same document shape, no `persona`, `source: "author"`. Consent date: one year from the run.
+**The author, C-0213**: hand-written sources in `corpus/ai_pool/henrique/` (`profile.toml` with name and location, `cv.md`, `cover_letter.md`, `linkedin.json` in the Dossier shape), converted to the same document shape, `source: "ai_pool"`. Consent date: one year from the run.
 
 **Writing**: the script removes any existing C-0201 to C-0213 and J-061 rows from `corpus/candidates.jsonl` and `corpus/jobs.jsonl` and appends the new ones, so re-running replaces the pool and touches nothing else. Re-index with `docker compose --profile setup run --rm ingest`.
 
 ## Simulated candidate with a Persona (`recruiter/interviewer.py`, `recruiter/prompts.py`)
 
-`simulated_answer` reads `metadata.persona` when present and uses a Persona prompt; without one, today's prompt is unchanged.
+`simulated_answer` takes an optional Persona (the runner loads it from `personas.toml`) and the turns so far; with a Persona it uses a Persona prompt, without one today's prompt is unchanged.
 
 - **Spoken answers**: first person, with the fillers, false starts and uneven length of speech in the persona's `speaking_style`, so the text compares with an STT transcript.
 - **Depth by tier**: `strong` gives the how, why, numbers and trade-offs; `gaps` is specific in its strong areas and thin elsewhere; `adjacent` steers toward the work it knows.
@@ -78,7 +79,7 @@ In-process against the RAG service and the Recruiter graph, with the configured 
 
 1. **Match** J-061 over Candidates filtered to `occupation = ai_engineering`, `top_k = 13`: every Candidate ranked, with Evidence.
 2. **Screen** all 13 with the Screener: a Screening verdict with a score per competency.
-3. **Interview** the fake Candidates the Screener advanced, through the interview graph with the Persona Simulated candidate answering.
+3. **Interview** the fake Candidates the Screener advanced through the Recruiter API in-process (`POST /interviews`, `POST /interviews/{id}/reply`, the same endpoints the voice worker calls), with the Persona Simulated candidate answering.
 4. **Import** the author's voice interview from `--live-interview` (the `InterviewState` file the voice worker writes). The runner checks the file is for C-0213 and J-061 and that its `graded_under` equals the run's; on a mismatch it stops and names the differing field. Without `--live-interview`, the author's row shows Match and Screening only and the report says the interview is pending.
 
 **Output**, committed in `results/ai-engineer-showcase/`:
@@ -103,7 +104,7 @@ Needs from the author: `corpus/ai_pool/henrique/` sources (any format; converted
 
 All with `FakeModelGateway`:
 
-- **Corpus**: the persona grid parses and has the agreed tier counts; generated documents have the right ids, metadata, Dossier shape and `persona`; bluffer prompts ask for discrepancies; re-running replaces only C-0201 to C-0213 and J-061; `competencies()` returns the four AI engineering competencies.
+- **Corpus**: the persona grid parses and has the agreed tier counts; generated documents have the right ids and metadata and no Persona fields; the author's Dossier has the voice spec's shape; missing author files fail before any model call; re-running replaces only C-0201 to C-0213 and J-061; `competencies()` returns the four AI engineering competencies.
 - **Simulated candidate**: the Persona prompt carries tier, style and honesty; without a persona the prompt is today's.
 - **Same judge**: `assess()` fills `graded_under`; the runner rejects a live interview with a different System 2 model, decider or guide hash, or the wrong Candidate or Job.
 - **Runner**: from scripted gateway replies, only advanced fakes are interviewed, the author is always included, and `report.md` has 13 rows with the author's highlighted.
