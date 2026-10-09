@@ -4,12 +4,15 @@ No LiveKit here: the LiveKit agent feeds final transcripts into `buffer` and spe
 """
 
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Awaitable, Callable
 
 from agentic_jev_rag.voice.recruiter_client import RecruiterClient, RecruiterError
 from agentic_jev_rag.voice.timing import TurnTimer
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -98,6 +101,7 @@ class VoiceInterview:
         if not answer:
             raise EmptyAnswer("the candidate has said nothing since the question was asked")
         timing = self.timer.take(answer)
+        log.info("Submitting answer: interview=%s kind=%s answer=%r", self.interview_id, self.current.kind, answer)
         self.transcript.append({"question": self.current.question, "kind": self.current.kind, "answer": answer, "timing": timing})
         try:
             state = await self._reply(answer, timing)

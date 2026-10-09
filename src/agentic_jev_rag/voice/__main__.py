@@ -50,7 +50,15 @@ async def interview(ctx: JobContext) -> None:
     async def on_retry() -> None:
         session.say(SORRY)
 
-    voice = VoiceInterview(RecruiterClient(config.voice.recruiter_url), candidate_id, job_id, RESULTS_DIR, on_retry=on_retry)
+    client = RecruiterClient(config.voice.recruiter_url)
+    voice = VoiceInterview(client, candidate_id, job_id, RESULTS_DIR, on_retry=on_retry)
+
+    async def cleanup() -> None:
+        if voice.interview_id:
+            voice.save()  # a cancelled job still writes its results file
+        await client.aclose()
+
+    ctx.add_shutdown_callback(cleanup)
     try:
         first = await voice.start()
     except (InterviewRefused, RecruiterError) as error:
@@ -77,9 +85,9 @@ async def interview(ctx: JobContext) -> None:
         nonlocal closing_started
         if not (voice.finished or voice.error):
             return
-        if event.new_state == "speaking":
-            closing_started = True
-        elif event.new_state == "listening" and closing_started:
+        if "speaking" in (event.old_state, event.new_state):
+            closing_started = True  # also when the interview ended while the agent was already speaking
+        if event.new_state == "listening" and closing_started:
             done.set()
 
     @session.on("user_state_changed")
