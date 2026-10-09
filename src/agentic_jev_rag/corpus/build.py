@@ -188,6 +188,9 @@ SOURCES = """# Corpus sources
 - **interviews.jsonl**: synthetic interview notes written by the System 2 model for seeded (Candidate, Job) pairs
   and Outcomes.
 - **policies/**: hand-written SwiftAI Recruit policies.
+- **AI engineer showcase pool** (J-061, C-0201..C-0213): J-061 is micro1's public job description, restructured by
+  the System 2 model. C-0201..C-0212 are synthetic CVs written by the System 2 model from `ai_pool/personas.toml`.
+  C-0213 is the author's own CV. A rebuild drops the pool: run `uv run python -m agentic_jev_rag.corpus.ai_pool`.
 
 Rebuild with `uv run python -m agentic_jev_rag.corpus.build --seed {seed}` (downloads are cached in `data/raw/`).
 """

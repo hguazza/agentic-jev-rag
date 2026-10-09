@@ -19,7 +19,7 @@ An open or past role at a Client, with its description, required skills, seniori
 _Avoid_: vacancy, position, req
 
 **Client**:
-A company that hires through SwiftAI Recruit. Clients are fictional.
+A company that hires through SwiftAI Recruit. Clients are fictional, except micro1 (J-061), the role this project targets (ADR 0014).
 
 **Interview note**:
 A record of one interview stage for a Candidate and a Job: what was asked, what was observed, the scores and the Outcome. Interview notes are synthetic.
@@ -35,6 +35,12 @@ The competencies a Job is assessed on, each rated on a fixed scale.
 
 **Consent**:
 A Candidate's permission for SwiftAI to hold and use their Profile, valid until a recorded date. A Candidate without valid Consent must not be contacted or shortlisted.
+
+**Persona**:
+Who a synthetic showcase Candidate is: fit tier, background, speaking style and honesty. Used to write their CV and to play them as a Simulated candidate; never stored in the corpus.
+
+**Showcase**:
+The AI engineer comparison for J-061: 12 Persona Candidates and the author, ranked, screened and interviewed by the Recruiter (`results/ai-engineer-showcase/`).
 
 ### RAG service
 
