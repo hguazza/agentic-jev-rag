@@ -53,6 +53,10 @@ This is a deliberately noisy baseline. Outcomes were drawn so they only lean on 
 
 The run cost $0.38 in Recruiter-side model calls and took about 3 minutes.
 
+## Voice interview
+
+The Interviewer can hold a live **voice** interview through LiveKit (ADR 0012). A LiveKit Agents worker turns speech into text, and a fast Voice host LLM asks the interview graph's questions out loud; the graph still decides every question and the assessment, and answers reach it as the exact transcript. See `docs/voice-demo.md` to run it from the LiveKit Agents Playground. It needs a LiveKit Cloud project (free tier) in `.env`.
+
 ## Architecture
 
 ```

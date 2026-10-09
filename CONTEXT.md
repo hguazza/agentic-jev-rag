@@ -74,6 +74,13 @@ The agent that holds a text interview with a Candidate, asking questions from th
 **Simulated candidate**:
 An LLM playing a Candidate from their Profile, so interviews can run without a human. Used in demos and evaluations only.
 
+**Voice worker**:
+The LiveKit process that holds a voice interview: speech to text, turn detection, the Voice host, text to speech. It reaches the interview graph only through the Recruiter API.
+
+**Voice host**:
+The fast LLM that speaks for the Interviewer in a voice interview. It delivers the graph's questions and handles greetings, repeats and clarifications; it never decides what is asked or how the Candidate is assessed.
+_Avoid_: voice agent (for the host alone), bot
+
 **Compliance**:
 The agent that checks the goal, the shortlist and the verdicts against Policy: fair hiring, Consent and grounded verdicts.
 _Avoid_: guardrail (for the whole agent)
