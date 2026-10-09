@@ -1,6 +1,8 @@
 # AGENTS.md
 
-Public, re-runnable benchmark of three RAG Levels over EU legal text (English first, then Portuguese). Read `CONTEXT.md` for the project's language and `docs/adr/` for decisions before working.
+SwiftAI Recruiter: a FastAPI RAG service and a LangGraph five-agent Recruiter that calls it, with System 1 decisions made by an LLM or by Jev. Read `CONTEXT.md` for the project's language and `docs/adr/` for decisions before working. The current design is `docs/superpowers/specs/2026-10-08-recruiter-design.md`; the EU legal benchmark it replaced is parked in `docs/parked/`.
+
+Run `uv run pytest` with Qdrant up (`docker compose up -d qdrant`). The Model gateway is the only fake; live tests are opt-in (`-m live`).
 
 ## Agent skills
 

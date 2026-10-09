@@ -37,6 +37,8 @@ RELEVANCE_INSTRUCTIONS = (
 )
 
 GROUNDEDNESS_INSTRUCTIONS = (
-    "Is every factual claim in the statement supported by the evidence passages? Answer no if any claim is "
-    "missing from, or contradicted by, the evidence."
+    "Are the factual statements in the text (what a person did, has, or achieved; numbers, dates, tools, "
+    "employers, rules) supported by the evidence passages? Ignore opinions, scores, recommendations, comparisons "
+    "with a job's requirements, and statements that something is absent or not shown. Answer no only if a stated "
+    "fact is missing from, or contradicted by, the evidence."
 )

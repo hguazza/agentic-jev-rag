@@ -6,5 +6,38 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  # One-shot: index the committed corpus. Run with `docker compose --profile setup run --rm ingest`.
+  ingest:
+    build: .
+    profiles: ["setup"]
+    command: ["python", "-m", "agentic_jev_rag.rag.ingest"]
+    env_file: .env
+    environment:
+      QDRANT_URL: http://qdrant:6333
+    depends_on:
+      - qdrant
+
+  rag-api:
+    build: .
+    command: ["uvicorn", "agentic_jev_rag.rag.api:create_default_rag_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+    env_file: .env
+    environment:
+      QDRANT_URL: http://qdrant:6333
+    ports:
+      - "8000:8000"
+    depends_on:
+      - qdrant
+
+  recruiter-api:
+    build: .
+    command: ["uvicorn", "agentic_jev_rag.recruiter.api:create_default_recruiter_app", "--factory", "--host", "0.0.0.0", "--port", "8001"]
+    env_file: .env
+    environment:
+      RAG_URL: http://rag-api:8000
+    ports:
+      - "8001:8001"
+    depends_on:
+      - rag-api
+
 volumes:
   qdrant_data:
