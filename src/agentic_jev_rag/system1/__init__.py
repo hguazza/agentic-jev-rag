@@ -1,0 +1,27 @@
+"""System 1 decisions behind one interface, made by the LLM decider or the Jev decider."""
+
+from agentic_jev_rag.config import Config
+from agentic_jev_rag.gateway import ModelGateway
+from agentic_jev_rag.system1.jev import JevDecider
+from agentic_jev_rag.system1.llm import LlmDecider
+from agentic_jev_rag.system1.types import (
+    GroundednessDecision,
+    GuardrailDecision,
+    RelevanceDecision,
+    RouteDecision,
+    System1Decider,
+    System1Error,
+    System1TraceEntry,
+)
+
+__all__ = [
+    "GroundednessDecision", "GuardrailDecision", "JevDecider", "LlmDecider", "RelevanceDecision",
+    "RouteDecision", "System1Decider", "System1Error", "System1TraceEntry", "make_deciders",
+]
+
+
+def make_deciders(config: Config, gateway: ModelGateway) -> dict[str, System1Decider]:
+    return {
+        "llm": LlmDecider(gateway, config.models.system_1_baseline),
+        "jev": JevDecider(gateway, config.models.jev_model),
+    }
