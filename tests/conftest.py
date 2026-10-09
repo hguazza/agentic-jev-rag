@@ -28,7 +28,14 @@ def qdrant() -> QdrantClient:
 def config(qdrant: QdrantClient):
     prefix = f"test_{uuid.uuid4().hex[:8]}_"
     yield Config(
-        models=ModelConfig(system_2_model="fake/system-2", embedding_model="fake/embedding"),
+        models=ModelConfig(
+            system_2_model="fake/system-2",
+            system_1_baseline="fake/system-1-baseline",
+            reference_judge="fake/reference-judge",
+            embedding_model="fake/embedding",
+            reranker="fake/reranker",
+            jev_model="fake/jev",
+        ),
         qdrant_url=QDRANT_URL,
         collection_prefix=prefix,
         collections=("case_law",),

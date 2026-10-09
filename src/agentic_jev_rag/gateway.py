@@ -12,6 +12,7 @@ class Completion:
     text: str
     latency_s: float
     cost_usd: float
+    retries: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -19,10 +20,20 @@ class Embeddings:
     vectors: list[list[float]]
     latency_s: float
     cost_usd: float
+    retries: tuple[str, ...] = ()
 
 
 class ModelGateway(Protocol):
-    def complete(self, model: str, prompt: str, *, system: str | None = None) -> Completion: ...
+    def complete(
+        self,
+        model: str,
+        prompt: str,
+        *,
+        system: str | None = None,
+        response_schema: tuple[str, dict] | None = None,
+    ) -> Completion:
+        """Chat completion. `response_schema` is (name, JSON schema) for strict structured output."""
+        ...
 
     def embed(self, model: str, texts: Sequence[str]) -> Embeddings: ...
 
@@ -47,7 +58,14 @@ class FakeModelGateway:
     dimensions: int = 512
     completion_calls: list[CompletionCall] = field(default_factory=list)
 
-    def complete(self, model: str, prompt: str, *, system: str | None = None) -> Completion:
+    def complete(
+        self,
+        model: str,
+        prompt: str,
+        *,
+        system: str | None = None,
+        response_schema: tuple[str, dict] | None = None,
+    ) -> Completion:
         self.completion_calls.append(CompletionCall(model, system, prompt))
         return Completion(self.answer_text, latency_s=0.0, cost_usd=0.0)
 
