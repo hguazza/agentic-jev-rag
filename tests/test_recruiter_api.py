@@ -195,3 +195,25 @@ def test_an_out_of_range_interview_assessment_is_retried_then_reported_as_a_502(
     always_bad.post(f"/interviews/{started['interview_id']}/reply", json={"message": "Kafka."})
     failed = always_bad.post(f"/interviews/{started['interview_id']}/reply", json={"message": "On-call."})
     assert failed.status_code == 502
+
+
+def test_a_reply_retried_after_a_502_does_not_record_the_retry_message_as_another_answer(client):
+    calls = {"n": 0}
+
+    def flaky(prompt):
+        calls["n"] += 1
+        if calls["n"] in (2, 3):  # the question after the first answer is invalid twice: the first reply is a 502
+            return {"done": False, "question": ""}
+        return interview_question(prompt)
+
+    api = client(scripted_gateway(structured={"interview_question": flaky, "interview_assessment": ASSESSMENT}))
+    started = api.post("/interviews", json={"candidate_id": "C-001", "job_id": "J-001"}).json()
+    reply = f"/interviews/{started['interview_id']}/reply"
+
+    failed = api.post(reply, json={"message": "I partitioned Kafka topics."})
+    retried = api.post(reply, json={"message": "RETRY MESSAGE, must not be recorded"})
+    done = api.post(reply, json={"message": "I owned on-call."})
+
+    assert failed.status_code == 502
+    assert retried.status_code == 200 and retried.json()["question"] == "Tell me about question 2."
+    assert [t["answer"] for t in done.json()["assessment"]["turns"]] == ["I partitioned Kafka topics.", "I owned on-call."]
