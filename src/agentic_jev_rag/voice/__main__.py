@@ -9,6 +9,7 @@ import logging
 import os
 from pathlib import Path
 
+from dotenv import find_dotenv, load_dotenv
 from livekit.agents import Agent, AgentServer, AgentSession, JobContext, cli, inference
 from livekit.plugins import openai, silero
 
@@ -94,4 +95,5 @@ async def interview(ctx: JobContext) -> None:
 
 
 if __name__ == "__main__":
+    load_dotenv(find_dotenv(usecwd=True))  # LiveKit reads LIVEKIT_* from the environment at startup
     cli.run_app(server)
