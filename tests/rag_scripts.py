@@ -53,3 +53,13 @@ def scripted_gateway(
         return answers
 
     return FakeModelGateway(complete_responder=complete, decide_responder=decide, chat_responder=chat_responder)
+
+
+def turns(*replies):
+    """A chat responder that returns the given replies in order (str or list of ToolCall), then 'Done.'."""
+    queue = list(replies)
+
+    def respond(model, messages, tools):
+        return queue.pop(0) if queue else "Done."
+
+    return respond
