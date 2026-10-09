@@ -1,0 +1,22 @@
+# SwiftAI Recruiter. Every Model role is an OpenRouter model ID (ADR 0005).
+collections = ["candidates", "jobs", "interviews", "policies"]
+qdrant_url = "http://localhost:6333"
+rag_url = "http://localhost:8000"
+corpus_dir = "corpus"
+chunk_size = 1200
+chunk_overlap = 150
+top_k = 8
+# Candidate chunks retrieved before Match groups and reranks them.
+rerank_candidates = 30
+# Which System 1 decider runs by default: "llm" (the System 1 baseline) or "jev".
+system_1 = "llm"
+
+[models]
+system_2_model = "anthropic/claude-sonnet-5.5"
+system_1_baseline = "anthropic/claude-haiku-4.5"
+# A different model family from the System 2 model, to avoid self-preference bias (ADR 0001).
+reference_judge = "openai/gpt-5.5"
+embedding_model = "baai/bge-m3"
+reranker = "cohere/rerank-4-fast"
+# Pinned so Jev's behaviour stays stable across runs.
+jev_model = "typesafe/jev-1.13"

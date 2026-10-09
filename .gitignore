@@ -5,3 +5,5 @@ __pycache__/
 data/
 .scratch/
 .DS_Store
+.superpowers/
+results/*/records.jsonl

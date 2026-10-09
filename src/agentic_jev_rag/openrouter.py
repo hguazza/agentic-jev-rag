@@ -1,5 +1,6 @@
-"""Model gateway over OpenRouter: chat completions and embeddings, with cost, latency and retries."""
+"""Model gateway over OpenRouter: chat, tools, embeddings, rerank and Jev, with cost, latency and retries."""
 
+import json
 import os
 import time
 from typing import Any, Callable, Sequence
@@ -7,7 +8,7 @@ from typing import Any, Callable, Sequence
 import httpx
 from dotenv import load_dotenv
 
-from agentic_jev_rag.gateway import Completion, Embeddings
+from agentic_jev_rag.gateway import ChatResult, Completion, Decisions, Embeddings, RerankResult, ToolCall
 
 BASE_URL = "https://openrouter.ai/api/v1"
 API_KEY_VARIABLE = "OPEN_ROUTER_API_TOKEN"
@@ -86,6 +87,35 @@ class OpenRouterGateway:
             retries=retries,
         )
 
+    def chat(self, model: str, messages: list[dict], *, tools: list[dict] | None = None) -> ChatResult:
+        request: dict[str, Any] = {"model": model, "messages": messages}
+        if tools:
+            request["tools"] = tools
+        body, latency, retries = self._post("/chat/completions", request)
+        message = body["choices"][0]["message"]
+        return ChatResult(
+            content=message.get("content"),
+            tool_calls=tuple(_tool_call(call) for call in message.get("tool_calls") or ()),
+            latency_s=latency,
+            cost_usd=body["usage"]["cost"],
+            retries=retries,
+        )
+
+    def rerank(self, model: str, query: str, documents: list[str]) -> RerankResult:
+        body, latency, retries = self._post(
+            "/rerank", {"model": model, "query": query, "documents": documents}
+        )
+        scores = [0.0] * len(documents)
+        for result in body["results"]:
+            scores[result["index"]] = result["relevance_score"]
+        return RerankResult(scores, latency, body["usage"]["cost"], retries)
+
+    def decide(self, model: str, state: str | dict, questions: dict[str, dict]) -> Decisions:
+        body, latency, retries = self._post(
+            "/systemone", {"model": model, "state": state, "questions": questions}
+        )
+        return Decisions(body["answers"], latency, body["usage"]["cost"], retries)
+
     def embed(self, model: str, texts: Sequence[str]) -> Embeddings:
         body, latency, retries = self._post("/embeddings", {"model": model, "input": list(texts)})
         data = sorted(body["data"], key=lambda e: e["index"])
@@ -138,3 +168,12 @@ def _seconds(retry_after: str | None) -> float | None:
         return float(retry_after) if retry_after else None
     except ValueError:
         return None
+
+
+def _tool_call(call: dict) -> ToolCall:
+    arguments = call["function"].get("arguments") or "{}"
+    try:
+        parsed = json.loads(arguments)
+    except json.JSONDecodeError:
+        parsed = {"_unparsed": arguments}
+    return ToolCall(id=call["id"], name=call["function"]["name"], arguments=parsed)

@@ -183,3 +183,94 @@ def test_non_json_gateway_errors_are_retried():
 
     assert len(requests) == 2
     assert "502" in completion.retries[0]
+
+
+MATCH_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "match_candidates",
+        "description": "Rank candidates for a job",
+        "parameters": {
+            "type": "object",
+            "properties": {"job_id": {"type": "string"}, "top_k": {"type": "integer"}},
+            "required": ["job_id"],
+        },
+    },
+}
+
+
+def test_chat_returns_tool_calls_with_parsed_arguments():
+    gateway, _ = gateway_replying(httpx.Response(200, json=recorded("chat_tool_call")))
+
+    result = gateway.chat(
+        "anthropic/claude-haiku-4.5",
+        [{"role": "user", "content": "Find candidates for job J-001."}],
+        tools=[MATCH_TOOL],
+    )
+
+    assert result.content is None
+    [call] = result.tool_calls
+    assert call.name == "match_candidates"
+    assert call.arguments == {"job_id": "J-001"}
+    assert call.id == "toolu_bdrk_012pLkdVeX6pUjV8azbQi6xQ"
+    assert result.cost_usd == 0.000882
+
+
+def test_chat_sends_messages_and_tools_as_given():
+    gateway, requests = gateway_replying(httpx.Response(200, json=recorded("chat_tool_call")))
+    messages = [
+        {"role": "system", "content": "You are a sourcing agent. Use tools."},
+        {"role": "user", "content": "Find candidates for job J-001."},
+    ]
+
+    gateway.chat("anthropic/claude-haiku-4.5", messages, tools=[MATCH_TOOL])
+
+    body = json.loads(requests[0].content)
+    assert body["messages"] == messages
+    assert body["tools"] == [MATCH_TOOL]
+
+
+def test_chat_result_turns_back_into_an_assistant_message_for_the_next_turn():
+    gateway, _ = gateway_replying(httpx.Response(200, json=recorded("chat_tool_call")))
+
+    message = gateway.chat("m", [{"role": "user", "content": "x"}], tools=[MATCH_TOOL]).as_message()
+
+    assert message["role"] == "assistant"
+    assert message["tool_calls"][0]["function"]["name"] == "match_candidates"
+    assert json.loads(message["tool_calls"][0]["function"]["arguments"]) == {"job_id": "J-001"}
+
+
+def test_rerank_returns_scores_in_input_order_with_cost():
+    gateway, requests = gateway_replying(httpx.Response(200, json=recorded("rerank")))
+    documents = [
+        "Data analyst skilled in Excel and Tableau.",
+        "Backend engineer, 7 years Python, built Kafka streaming pipelines.",
+        "Recruiter with HR operations background.",
+    ]
+
+    result = gateway.rerank("cohere/rerank-4-fast", "senior Python backend engineer with Kafka", documents)
+
+    assert len(result.scores) == 3
+    assert max(result.scores) == result.scores[1] == pytest.approx(0.8399179)
+    assert result.cost_usd == 0.002
+    assert requests[0].url == "https://openrouter.ai/api/v1/rerank"
+    body = json.loads(requests[0].content)
+    assert body["documents"] == documents
+    assert body["query"] == "senior Python backend engineer with Kafka"
+
+
+def test_decide_posts_typed_questions_to_systemone_and_returns_answers():
+    gateway, requests = gateway_replying(httpx.Response(200, json=recorded("jev_systemone")))
+    questions = {"discriminatory": {"type": "noul", "instructions": "Protected characteristic?"}}
+
+    decisions = gateway.decide("typesafe/jev-1.13", "Only men under 35.", questions)
+
+    assert decisions.answers["discriminatory"]["noul"] == 0.99
+    assert decisions.answers["route"]["choice"] == "candidates"
+    assert decisions.cost_usd == 0.000018144
+    assert requests[0].url == "https://openrouter.ai/api/v1/systemone"
+    assert json.loads(requests[0].content) == {
+        "model": "typesafe/jev-1.13",
+        "state": "Only men under 35.",
+        "questions": questions,
+    }

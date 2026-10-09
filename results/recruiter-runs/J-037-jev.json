@@ -1,0 +1,577 @@
+{
+ "goal": "Fill the Senior Linux Administrator role for Lumen Studio Collective",
+ "job_id": "J-037",
+ "system_1": "jev",
+ "refused": false,
+ "shortlist": {
+  "job_id": "J-037",
+  "candidates": [
+   {
+    "candidate_id": "C-0040",
+    "name": "Lucas Singh",
+    "reason": "Closest match to the Linux core. CV shows Unix/Linux (Red Hat) system administration, a Red Hat Enterprise Linux 7 System Administration course (2015), and bash/perl scripting. Also lists MySQL and Oracle 11g and runs a production web portal on a server. Gaps: about 3+ years of experience against the 6–8 asked for, and no evidence of Nagios or Puppet."
+   },
+   {
+    "candidate_id": "C-0134",
+    "name": "Daniel Mensah",
+    "reason": "UNIX/Linux system administration and performance monitoring in a 24x7 technical support tier. Diagnosed UNIX and Windows problems, kept systems and data available, and wrote up procedures and trained team members. Knows J2EE application servers and Oracle, and holds CompTIA Security+. Gaps: no named RHEL, Puppet or Nagios experience."
+   },
+   {
+    "candidate_id": "C-0131",
+    "name": "Lucas Walsh",
+    "reason": "Supports mixed Linux (including SUSE), SCO Unix and Windows server environments, with Dell PowerEdge/HP server hardware experience. Also has firewall, network and change-management skills, which fit the role's network and design requirements. Gaps: the profile leans toward Cisco and network work, and shows no scripting or automation tools."
+   },
+   {
+    "candidate_id": "C-0130",
+    "name": "Daniel Usman",
+    "reason": "Built and supported database-driven systems in a Linux hosting environment (PHP and MySQL), with Linux and MySQL listed in skills. Relevant to the web and MySQL side of the role. Gaps: the profile is more development and marketing than administration, with no evidence of hardening, monitoring or configuration management."
+   },
+   {
+    "candidate_id": "C-0150",
+    "name": "Emeka Quinn",
+    "reason": "Systems administrator work on servers: hardware repair coordination with vendors, adding servers to the domain, compliance with cyber security requirements, and troubleshooting documentation. Matches the documentation, security and server hardware requirements. Gaps: the evidence is mostly not Linux-specific."
+   },
+   {
+    "candidate_id": "C-0013",
+    "name": "Isaac Nakamura",
+    "reason": "Hands-on systems support: hardware and software installation, diagnostics, network packet analysis, and defining requirements for new systems. A partial fit for 1st/2nd-level production support. Gaps: no Linux-specific evidence in the retrieved chunks, which needs verifying."
+   }
+  ]
+ },
+ "verdicts": [
+  {
+   "candidate_id": "C-0040",
+   "job_id": "J-037",
+   "decision": "advance",
+   "scores": [
+    {
+     "competency": "Technical operations",
+     "score": 4,
+     "evidence_chunk_ids": [
+      "C-0040#2",
+      "C-0040#3",
+      "C-0040#4",
+      "C-0040#1",
+      "C-0040#8"
+     ],
+     "rationale": "Hands-on admin of 12+ Red Hat/CentOS/Solaris servers, including patching, backup/restore and upgrades. Monitoring with Nagios, OSSEC and LogWatch. Apache, Tomcat and DNS. iptables hardening. SSL management. Bash and perl scripting. Oracle and MySQL administration. RHEL 7 training. Gaps against the job: no Puppet/Chef automation, no virtualisation and no 24/7 SLA evidence. The CV also lists only about 3+ years of professional experience against the 6–8 asked for."
+    },
+    {
+     "competency": "Problem solving",
+     "score": 3,
+     "evidence_chunk_ids": [
+      "C-0040#3",
+      "C-0040#4",
+      "C-0040#0"
+     ],
+     "rationale": "Performance tuning, query optimisation, consistency checks and security/access troubleshooting show diagnostic ability. There are no explicit root-cause or incident examples, and no interview evidence."
+    },
+    {
+     "competency": "Project delivery",
+     "score": 3,
+     "evidence_chunk_ids": [
+      "C-0040#2",
+      "C-0040#6",
+      "C-0040#7"
+     ],
+     "rationale": "Implemented the DegreeWorks application on Linux with an Oracle backend and integrated SSO. Coordinated a five-person project delivered on time. Evidence of formal change management or rollout planning is limited."
+    },
+    {
+     "competency": "Stakeholder service",
+     "score": 3,
+     "evidence_chunk_ids": [
+      "C-0040#4",
+      "C-0040#2",
+      "C-0040#0"
+     ],
+     "rationale": "Handles support tickets in BMC Track-It, resolves access problems for faculty, staff and students, and is the chief technical contact for the university website. Training, documentation and vendor management are not evidenced, and there are no interview notes."
+    }
+   ],
+   "summary": "Advance. No competency scored 1 and the average is 3.25. The candidate's strongest area is technical operations: Linux/Unix administration, Nagios monitoring, Apache/Tomcat, Oracle/MySQL, patching and scripting all match the role's core. The main gaps are the CV's stated 3+ years of professional experience against the 6–8 asked for, no Puppet/Chef or virtualisation experience, and no interview evidence. The CV is headed 'Information Designer', but the job is IT, so I scored against the Information Technology scorecard. I did not rely on the profile's 13-year experience figure because it conflicts with the CV text. Worth confirming seniority and 24/7 production-support experience at the next stage."
+  },
+  {
+   "candidate_id": "C-0134",
+   "job_id": "J-037",
+   "decision": "advance",
+   "scores": [
+    {
+     "competency": "Technical operations",
+     "score": 2,
+     "evidence_chunk_ids": [
+      "C-0134#1",
+      "C-0134#3",
+      "C-0134#5",
+      "C-0134#9"
+     ],
+     "rationale": "Shows UNIX/Windows operations, server and network monitoring, patching of web apps, a 24x7 support tier and Security+. Linux appears only as a keyword. The CV shows no RHEL administration, hardening, bash/Python scripting, Nagios/PRTG, Puppet/Chef or MySQL. Depth is well below the senior Linux level the job asks for."
+    },
+    {
+     "competency": "Problem solving",
+     "score": 3,
+     "evidence_chunk_ids": [
+      "C-0134#0",
+      "C-0134#2",
+      "C-0134#5"
+     ],
+     "rationale": "Root-cause analysis (claims a 15% accuracy improvement), diagnosing UNIX and Windows processing problems, isolating failures, and system health analysis. Evidence is solid but not at a senior Linux or production-incident level."
+    },
+    {
+     "competency": "Project delivery",
+     "score": 3,
+     "evidence_chunk_ids": [
+      "C-0134#4",
+      "C-0134#5",
+      "C-0134#2"
+     ],
+     "rationale": "Requirements management plans, system integration, verification and validation, and consistently meeting production work-order deadlines. There is no clear evidence of formal change management with rollback plans or of leading rollouts."
+    },
+    {
+     "competency": "Stakeholder service",
+     "score": 4,
+     "evidence_chunk_ids": [
+      "C-0134#0",
+      "C-0134#2",
+      "C-0134#4",
+      "C-0134#6"
+     ],
+     "rationale": "Repeated evidence of help desk and customer support, a self-reported 100% customer satisfaction rate, vendor coordination for hardware replacement, and training and seminars delivered. Documentation for help desk staff is also shown. This matches the job's support, training and documentation duties."
+    }
+   ],
+   "summary": "Advance, but it is borderline. The average score is 3.0 and no competency scores 1. No hard requirement is failed. Strengths are customer-facing support, documentation and training, and general UNIX/systems troubleshooting. The main gap is senior Linux depth: the CV shows no RHEL, scripting, Nagios/Puppet or MySQL, and the Linux experience is not clearly 6-8 years. There are no interview notes. Suggested follow-up is a technical interview on Linux administration, scripting and automation. Work location and right to work in Dublin should be confirmed, as the candidate is listed in the US."
+  },
+  {
+   "candidate_id": "C-0131",
+   "job_id": "J-037",
+   "decision": "advance",
+   "scores": [
+    {
+     "competency": "Technical operations",
+     "score": 3,
+     "evidence_chunk_ids": [
+      "C-0131#4",
+      "C-0131#2",
+      "C-0131#7"
+     ],
+     "rationale": "Long record of running production infrastructure: data center operations, Cisco network, Dell PowerEdge servers, VMware, SolarWinds monitoring, uptime focus. Linux evidence is thin, though: SUSE and SCO Unix listed and mixed Linux help desk work. No RHEL, bash/python scripting, Puppet/Chef, Tomcat, MySQL or Oracle shown. This is a gap against the senior Linux admin requirements."
+    },
+    {
+     "competency": "Problem solving",
+     "score": 3,
+     "evidence_chunk_ids": [
+      "C-0131#4",
+      "C-0131#6",
+      "C-0131#5"
+     ],
+     "rationale": "Led network troubleshooting in emergencies, resolved production problems, documented problems and resolutions, and did technical feasibility research. Evidence is network-centric rather than Linux root-cause work."
+    },
+    {
+     "competency": "Project delivery",
+     "score": 4,
+     "evidence_chunk_ids": [
+      "C-0131#3",
+      "C-0131#6"
+     ],
+     "rationale": "Implemented a new MPLS network and phone system saving 180k a year, helped deploy Nexus 7K, and set up an IT governance function with audit change management."
+    },
+    {
+     "competency": "Stakeholder service",
+     "score": 4,
+     "evidence_chunk_ids": [
+      "C-0131#3",
+      "C-0131#4",
+      "C-0131#1"
+     ],
+     "rationale": "Main IT point of contact for the business, cut IT budget by 45% and 15% through vendor and service provider management, supported hundreds of users, and gave KPI reporting to leaders."
+    }
+   ],
+   "summary": "Advance. No competency scores 1 and the average is 3.5, so the rule is met. The candidate has strong infrastructure and network operations, project delivery and vendor/stakeholder management. The main risk is shallow hands-on Linux depth (no RHEL, scripting, Puppet/Chef, Tomcat, MySQL or Oracle evidenced) for a senior Linux admin role, so a technical interview should probe this. There were no interview notes to cite, so all scores rest on the CV only."
+  },
+  {
+   "candidate_id": "C-0130",
+   "job_id": "J-037",
+   "decision": "advance",
+   "scores": [
+    {
+     "competency": "Technical operations",
+     "score": 2,
+     "evidence_chunk_ids": [
+      "C-0130#5",
+      "C-0130#3",
+      "C-0130#11"
+     ],
+     "rationale": "Operations experience is mostly Windows/SQL Server/Oracle: patch validation on a test server, load balancing across 3 app and 1 database servers. Linux exposure is limited to PHP/MySQL on Linux hosting. There is no evidence of RHEL administration, hardening, Puppet/Chef, Nagios-type monitoring or 24/7 SLA support, which are core to this senior Linux role."
+    },
+    {
+     "competency": "Problem solving",
+     "score": 3,
+     "evidence_chunk_ids": [
+      "C-0130#7",
+      "C-0130#5"
+     ],
+     "rationale": "Cut end-user downtime from 10-20 hours a month to zero through a scheduled maintenance plan. Stabilised an application in production with patch testing and load balancing. This is solid root-cause work, but it is not in a Linux environment."
+    },
+    {
+     "competency": "Project delivery",
+     "score": 4,
+     "evidence_chunk_ids": [
+      "C-0130#4",
+      "C-0130#7",
+      "C-0130#3"
+     ],
+     "rationale": "Delivered a two-phase SQL Server migration within 30 days, a 60-day knowledge transfer, and 14 portfolio implementations. Web projects were reported as delivered on time and within budget. Repeated evidence of planned, deadline-driven delivery."
+    },
+    {
+     "competency": "Stakeholder service",
+     "score": 4,
+     "evidence_chunk_ids": [
+      "C-0130#4",
+      "C-0130#6",
+      "C-0130#1"
+     ],
+     "rationale": "Worked with Marketing, Risk, Operations and other business teams. Managed vendors and offshore resources. Provided support continuity for a department of 120 users. Shows strong customer service and vendor management."
+    }
+   ],
+   "summary": "Advance on the scorecard rule: no competency scores 1 and the average is 3.25 (Technical operations 2, Problem solving 3, Project delivery 4, Stakeholder service 4). Daniel Usman has strong project delivery and stakeholder and vendor management. Production support and problem-solving evidence is solid but mostly on Windows, SQL Server and Oracle. The main gap is hands-on Linux administration (RHEL, hardening, Puppet/Chef, monitoring, 24/7 SLAs). He also has about 9 years of mostly development-focused experience, not Linux sysadmin work. Recommend that the next interview probe Linux depth. The interview notes on file relate to other roles, so they were not used as evidence."
+  },
+  {
+   "candidate_id": "C-0150",
+   "job_id": "J-037",
+   "decision": "advance",
+   "scores": [
+    {
+     "competency": "Technical operations",
+     "score": 2,
+     "evidence_chunk_ids": [
+      "C-0150#3",
+      "C-0150#7",
+      "C-0150#6"
+     ],
+     "rationale": "Long, solid sysadmin record: over 500 servers, patching, hardening, compliance checks, HIDS and AV monitoring, imaging, and availability work. All of it is Windows/Windows Server. The CV shows no Linux/RHEL, no scripting (bash/python), no Nagios/PRTG-type monitoring, no Puppet/Chef, no Apache/Tomcat/Java and no MySQL/Oracle. This is a large gap against a Senior Linux role, so the score is low despite the transferable fundamentals."
+    },
+    {
+     "competency": "Problem solving",
+     "score": 3,
+     "evidence_chunk_ids": [
+      "C-0150#7",
+      "C-0150#6",
+      "C-0150#8"
+     ],
+     "rationale": "Diagnoses and recovers failed systems, applies performance tuning and corrective or preventive actions, brings non-compliant servers back into compliance, and documents troubleshooting cases for the team. Earlier work includes network fault tracing and analysing software errors. Root-cause work is described only generically, and none of it is in Linux."
+    },
+    {
+     "competency": "Project delivery",
+     "score": 3,
+     "evidence_chunk_ids": [
+      "C-0150#3",
+      "C-0150#7",
+      "C-0150#11"
+     ],
+     "rationale": "Plans and coordinates installation of new systems, covers 7 projects, and acted as section supervisor. Completed formal IT project management and change management training (ITIL, Change Management). Delivered a single sign-on and secure-web migration on TOS. The evidence for on-time delivery is moderate."
+    },
+    {
+     "competency": "Stakeholder service",
+     "score": 4,
+     "evidence_chunk_ids": [
+      "C-0150#3",
+      "C-0150#5",
+      "C-0150#4"
+     ],
+     "rationale": "Acts as the primary liaison with customer organisations. Coordinates vendors for hardware repair and access clearance, and handles tickets. Trains new staff and IT specialists and presents on new systems. Writes shared documentation. Performance awards in several years."
+    }
+   ],
+   "summary": "Advance, but only just: no competency scores 1 and the average is 3.0, which meets the threshold. The candidate has 18 years of strong Windows-based systems administration at federal scale (500+ servers), with good vendor and stakeholder handling, training and project coordination. The main concern is that the CV shows no Linux experience at all. Nothing on RHEL, scripting, Nagios-type monitoring, Puppet/Chef, Apache/Tomcat/Java or MySQL/Oracle, which the Senior Linux Administrator role requires. No interview notes were found. Any next step should test Linux depth directly. Assessment is based only on job-related evidence."
+  },
+  {
+   "candidate_id": "C-0013",
+   "job_id": "J-037",
+   "decision": "advance",
+   "scores": [
+    {
+     "competency": "Technical operations",
+     "score": 2,
+     "evidence_chunk_ids": [
+      "C-0013#5",
+      "C-0013#10",
+      "C-0013#2"
+     ],
+     "rationale": "Real infrastructure operations experience: technical lead for server infrastructure (dev, QA, staging, production), second-level server support, OS expert, and NOC management. However, the CV shows no Linux/RHEL, scripting, Nagios/PRTG-style monitoring, Puppet/Chef, patching or hardening, or MySQL/Oracle experience. That is a large gap against a senior Linux admin role."
+    },
+    {
+     "competency": "Problem solving",
+     "score": 3,
+     "evidence_chunk_ids": [
+      "C-0013#5",
+      "C-0013#7",
+      "C-0013#10"
+     ],
+     "rationale": "Shows end-to-end incident management, root cause analysis, computer diagnostics, and analysis of network packets and OS data to find anomalies. This is solid, but it is not tied to Linux production environments."
+    },
+    {
+     "competency": "Project delivery",
+     "score": 5,
+     "evidence_chunk_ids": [
+      "C-0013#4",
+      "C-0013#3",
+      "C-0013#7"
+     ],
+     "rationale": "Strong, repeated delivery evidence: technical PM for 300+ kiosks across 22 airports (over $5M), PM on ERP implementations, over 4000 PM hours, and change management programmes. Also shows Agile delivery."
+    },
+    {
+     "competency": "Stakeholder service",
+     "score": 4,
+     "evidence_chunk_ids": [
+      "C-0013#6",
+      "C-0013#8",
+      "C-0013#9"
+     ],
+     "rationale": "Works with C-level stakeholders and clients, runs workshops, trains implementation teams, and manages supplier and equipment providers. Also has ITIL service certifications. This matches the role's communication, training and vendor-liaison needs."
+    }
+   ],
+   "summary": "Advance under the scorecard rule: no competency scored 1 and the average is 3.5 (2, 3, 5, 4). The CV is project-delivery and ERP/pre-sales heavy, with general infrastructure and NOC operations experience. It shows no direct Linux administration, scripting, monitoring-tool, configuration-management or database experience. The role asks for 6 to 8 years as a Linux admin, so the reviewer should check Linux depth in the next stage. The job lists no hard requirement such as a licence. There are no interview notes for this candidate, so the scores rest on the CV alone."
+  }
+ ],
+ "assessments": [
+  {
+   "candidate_id": "C-0040",
+   "job_id": "J-037",
+   "turns": [
+    {
+     "question": "Hello, and thank you for joining. Before we start, please note that you are speaking with an AI system, and a human recruiter will review every assessment from this interview. This interview is for the Senior Linux Administrator role in the Systems Support team at Lumen Studio Collective. To begin, could you summarise the experience from your past work that you think is most relevant to this role?",
+     "answer": "Thank you for having me. I have over 3 years of professional experience as an Information Designer where I've administered and maintained 12+ servers running Red Hat Linux, CentOS Linux, and Unix Solaris 10, including routine maintenance, patching, system backups, and hardware upgrades. I'm also well-versed in server security management using iptables, SSL certificate installation and maintenance, web server administration including Apache and Tomcat, and system monitoring tools like Nagios and OSSEC. Additionally, I've completed formal training in Red Hat Enterprise Linux 7 System Administration in 2015, which has equipped me with strong Linux system administration capabilities that I believe are directly applicable to this Senior Linux Administrator role."
+    },
+    {
+     "question": "Thank you, that's helpful. I'd like to hear about a specific time when a production Linux server or service you supported failed or performed badly. What was the situation, how did you diagnose it, what did you personally do to fix it, and what was the result, including how you made sure the root cause was resolved and not just the symptom?",
+     "answer": "I appreciate the question, but I need to be honest—my CV doesn't include a specific documented example of a production Linux server failure that I diagnosed and resolved. While my experience as an Information Designer shows I managed 12+ Red Hat Linux and Unix servers with routine maintenance, patching, and backups, and I used monitoring tools like Nagios and LogWatch, the CV doesn't describe a particular incident where a server went down or failed, how I diagnosed the root cause, or the steps I took to resolve it. I'd rather not fabricate details than give you an inaccurate picture of my experience."
+    },
+    {
+     "question": "Thank you for being upfront. You don't need to rely on your CV, as I'm interested in what you remember from your own work. Let's move to a different area. Your CV mentions implementing DegreeWorks on a Linux server with an Oracle database. Can you walk me through that project? What was the goal and timeline, what did you personally plan and do (for example testing, documentation, or a rollback plan), and how did it turn out?",
+     "answer": "I appreciate the question. Looking back at my experience as an Information Designer, I implemented DegreeWorks as a web-based academic advising and degree audit tool on a Linux server with an Oracle database backend, working with highly customized XML documents for the frontend. My role involved the technical deployment and configuration of the system to help students and advisors navigate curriculum requirements. However, I should be honest—my CV doesn't contain specific details about the project timeline, my particular planning activities like testing protocols or rollback procedures, or the ultimate outcomes. Rather than speculate on those specifics, I'd prefer to be straightforward: while I have hands-on experience with database deployment and system administration from that role, I don't have clear recollection of those particular project management details to share accurately with you."
+    },
+    {
+     "question": "Thanks for your honesty so far. Please answer from your own memory of the work, not from your CV. Tell me about a time you had to explain a technical problem, outage or planned change to non-technical users or a business team, for example while handling support tickets or access requests. What was the situation, what did you personally say or do to keep them informed, and how did they respond or what was the outcome?",
+     "answer": "I appreciate the question, but I have to be honest—looking back at my actual work experience, I don't have a specific memory of a situation like that to share with you. While my CV mentions handling tickets via BMC Track-It and issuing Banner security access for faculty, staff, and students, I can't recall a particular instance where I had to explain a technical outage or complex problem to non-technical users in a way that stands out in my memory. I want to give you an accurate answer rather than reconstruct something that might not be truthful about how I actually communicated in those situations."
+    }
+   ],
+   "scores": [
+    {
+     "competency": "Technical operations",
+     "score": 3,
+     "evidence_chunk_ids": [
+      "A1"
+     ],
+     "rationale": "Candidate described relevant hands-on operations: \"administered and maintained 12+ servers running Red Hat Linux, CentOS Linux, and Unix Solaris 10, including routine maintenance, patching, system backups, and hardware upgrades\", plus iptables, SSL certificates, Apache/Tomcat and Nagios/OSSEC. This is a good fit for the technical stack, but it is a summary of tasks with no scale, SLA or 24/7 availability detail. The \"over 3 years\" of experience is well below the 6 to 8 years expected for a senior role."
+    },
+    {
+     "competency": "Problem solving",
+     "score": 1,
+     "evidence_chunk_ids": [
+      "A2"
+     ],
+     "rationale": "Asked for a production incident, the candidate said \"my CV doesn't include a specific documented example of a production Linux server failure that I diagnosed and resolved\" and did not describe any diagnosis or root-cause fix. Their honesty is noted, but no interview evidence of incident diagnosis was given."
+    },
+    {
+     "competency": "Project delivery",
+     "score": 2,
+     "evidence_chunk_ids": [
+      "A3"
+     ],
+     "rationale": "Candidate confirmed they \"implemented DegreeWorks as a web-based academic advising and degree audit tool on a Linux server with an Oracle database backend\" and handled deployment and configuration. They then said \"I don't have clear recollection of those particular project management details\", giving no timeline, testing, documentation, rollback planning or outcome."
+    },
+    {
+     "competency": "Stakeholder service",
+     "score": 2,
+     "evidence_chunk_ids": [
+      "A4"
+     ],
+     "rationale": "Candidate mentioned \"handling tickets via BMC Track-It and issuing Banner security access for faculty, staff, and students\", which shows some user-facing support. They said \"I don't have a specific memory\" of explaining an outage or change to non-technical users, so there is no evidence of clear communication or vendor management."
+    }
+   ],
+   "recommendation": "no_hire",
+   "summary": "The average score is 2.0 (3, 1, 2, 2), below the 3.0 needed for next_round, and Problem solving scores 1, so the Interview Guide's rule gives no_hire. The candidate has a relevant technical profile (RHEL/CentOS administration, patching, iptables, SSL, Apache/Tomcat, Nagios, Oracle/MySQL) and was consistently honest, but only the opening answer showed real substance. The candidate gave no STAR examples of incident diagnosis, project planning with rollback, or communicating with non-technical users. With roughly 3 years of experience against the 6 to 8 expected for a senior role, the evidence does not support the required seniority. A human recruiter will review this assessment."
+  }
+ ],
+ "findings": [
+  {
+   "check": "input_guardrail",
+   "subject": "goal",
+   "passed": true,
+   "detail": "Input guardrail verdict: allowed"
+  },
+  {
+   "check": "consent",
+   "subject": "C-0040",
+   "passed": true,
+   "detail": "Consent valid until 2028-03-22."
+  },
+  {
+   "check": "consent",
+   "subject": "C-0134",
+   "passed": true,
+   "detail": "Consent valid until 2026-12-22."
+  },
+  {
+   "check": "consent",
+   "subject": "C-0131",
+   "passed": true,
+   "detail": "Consent valid until 2028-09-17."
+  },
+  {
+   "check": "consent",
+   "subject": "C-0130",
+   "passed": true,
+   "detail": "Consent valid until 2027-05-08."
+  },
+  {
+   "check": "consent",
+   "subject": "C-0150",
+   "passed": true,
+   "detail": "Consent valid until 2028-01-14."
+  },
+  {
+   "check": "consent",
+   "subject": "C-0013",
+   "passed": true,
+   "detail": "Consent valid until 2027-01-28."
+  },
+  {
+   "check": "groundedness",
+   "subject": "C-0040",
+   "passed": true,
+   "detail": "Screening verdict is supported by its evidence."
+  },
+  {
+   "check": "groundedness",
+   "subject": "C-0134",
+   "passed": true,
+   "detail": "Screening verdict is supported by its evidence."
+  },
+  {
+   "check": "groundedness",
+   "subject": "C-0131",
+   "passed": true,
+   "detail": "Screening verdict is supported by its evidence."
+  },
+  {
+   "check": "groundedness",
+   "subject": "C-0130",
+   "passed": true,
+   "detail": "Screening verdict is supported by its evidence."
+  },
+  {
+   "check": "groundedness",
+   "subject": "C-0150",
+   "passed": true,
+   "detail": "Screening verdict is supported by its evidence."
+  },
+  {
+   "check": "groundedness",
+   "subject": "C-0013",
+   "passed": true,
+   "detail": "Screening verdict is supported by its evidence."
+  }
+ ],
+ "system_1_trace": [
+  {
+   "decision": "input_guardrail",
+   "outcome": "allowed",
+   "latency_s": 0.7024609579966636,
+   "cost_usd": 0.000023058,
+   "implementation": "jev"
+  },
+  {
+   "decision": "groundedness",
+   "outcome": "grounded",
+   "latency_s": 0.655567207999411,
+   "cost_usd": 0.000084084,
+   "implementation": "jev"
+  },
+  {
+   "decision": "groundedness",
+   "outcome": "grounded",
+   "latency_s": 0.6103516659932211,
+   "cost_usd": 0.000095718,
+   "implementation": "jev"
+  },
+  {
+   "decision": "groundedness",
+   "outcome": "grounded",
+   "latency_s": 0.4472857090004254,
+   "cost_usd": 0.000092862,
+   "implementation": "jev"
+  },
+  {
+   "decision": "groundedness",
+   "outcome": "grounded",
+   "latency_s": 0.3931706250004936,
+   "cost_usd": 0.000093912,
+   "implementation": "jev"
+  },
+  {
+   "decision": "groundedness",
+   "outcome": "grounded",
+   "latency_s": 0.4424139170005219,
+   "cost_usd": 0.0001134,
+   "implementation": "jev"
+  },
+  {
+   "decision": "groundedness",
+   "outcome": "grounded",
+   "latency_s": 0.4490024589904351,
+   "cost_usd": 0.00009975,
+   "implementation": "jev"
+  }
+ ],
+ "notes": [
+  {
+   "agent": "sourcer",
+   "subject": "J-037",
+   "stopped_reason": "submitted",
+   "steps": 3,
+   "cost_usd": 0.057386
+  },
+  {
+   "agent": "screener",
+   "subject": "C-0040",
+   "stopped_reason": "submitted",
+   "steps": 2,
+   "cost_usd": 0.033465999999999996
+  },
+  {
+   "agent": "screener",
+   "subject": "C-0134",
+   "stopped_reason": "submitted",
+   "steps": 2,
+   "cost_usd": 0.037308
+  },
+  {
+   "agent": "screener",
+   "subject": "C-0131",
+   "stopped_reason": "submitted",
+   "steps": 2,
+   "cost_usd": 0.034166
+  },
+  {
+   "agent": "screener",
+   "subject": "C-0130",
+   "stopped_reason": "submitted",
+   "steps": 2,
+   "cost_usd": 0.037922000000000004
+  },
+  {
+   "agent": "screener",
+   "subject": "C-0150",
+   "stopped_reason": "submitted",
+   "steps": 2,
+   "cost_usd": 0.041616
+  },
+  {
+   "agent": "screener",
+   "subject": "C-0013",
+   "stopped_reason": "submitted",
+   "steps": 2,
+   "cost_usd": 0.035834000000000005
+  }
+ ],
+ "cost_usd": 0.38196278399999994,
+ "latency_s": 174.55624379099754
+}

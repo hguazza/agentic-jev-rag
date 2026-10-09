@@ -1,3 +1,4 @@
+# Values come from the environment or from .env (read automatically by Compose; optional).
 services:
   qdrant:
     image: qdrant/qdrant:v1.19.1
@@ -5,6 +6,41 @@ services:
       - "6333:6333"
     volumes:
       - qdrant_data:/qdrant/storage
+
+  # One-shot: index the committed corpus. Run with `docker compose --profile setup run --rm ingest`.
+  ingest:
+    build: .
+    profiles: ["setup"]
+    command: ["python", "-m", "agentic_jev_rag.rag.ingest"]
+    environment:
+      OPEN_ROUTER_API_TOKEN: ${OPEN_ROUTER_API_TOKEN:-}
+      QDRANT_URL: http://qdrant:6333
+    depends_on:
+      - qdrant
+
+  rag-api:
+    build: .
+    command: ["uvicorn", "agentic_jev_rag.rag.api:create_default_rag_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      OPEN_ROUTER_API_TOKEN: ${OPEN_ROUTER_API_TOKEN:-}
+      SYSTEM_1: ${SYSTEM_1:-llm}
+      QDRANT_URL: http://qdrant:6333
+    ports:
+      - "8000:8000"
+    depends_on:
+      - qdrant
+
+  recruiter-api:
+    build: .
+    command: ["uvicorn", "agentic_jev_rag.recruiter.api:create_default_recruiter_app", "--factory", "--host", "0.0.0.0", "--port", "8001"]
+    environment:
+      OPEN_ROUTER_API_TOKEN: ${OPEN_ROUTER_API_TOKEN:-}
+      SYSTEM_1: ${SYSTEM_1:-llm}
+      RAG_URL: http://rag-api:8000
+    ports:
+      - "8001:8001"
+    depends_on:
+      - rag-api
 
 volumes:
   qdrant_data:

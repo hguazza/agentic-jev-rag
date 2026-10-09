@@ -1,0 +1,103 @@
+"""The Interviewer: a text interview built from the Job, the CV and SwiftAI's Interview Guide."""
+
+import json
+
+from agentic_jev_rag.recruiter import prompts
+from agentic_jev_rag.recruiter.context import RecruiterContext
+from agentic_jev_rag.recruiter.schemas import CompetencyScore, InterviewAssessment, InterviewTurn, json_schema
+
+QUESTION_SCHEMA = {
+    "type": "object",
+    "properties": {"done": {"type": "boolean"}, "question": {"type": "string"}},
+    "required": ["done", "question"],
+    "additionalProperties": False,
+}
+ASSESSMENT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "scores": {"type": "array", "items": json_schema(CompetencyScore)},
+        "recommendation": {"type": "string", "enum": ["hire", "no_hire", "next_round"]},
+        "summary": {"type": "string"},
+    },
+    "required": ["scores", "recommendation", "summary"],
+    "additionalProperties": False,
+}
+
+
+def next_question(
+    ctx: RecruiterContext, candidate: dict, job: dict, turns: list[InterviewTurn], max_questions: int = 4
+) -> str | None:
+    """The next question to ask, or None when the interview is complete."""
+    if len(turns) >= max_questions:
+        return None
+    prompt = (
+        f"{_briefing(ctx, candidate, job)}\n\nInterview so far:\n{_transcript(turns) or '(not started)'}\n\n"
+        f"Questions asked: {len(turns)} of at most {max_questions}. Give the next question, or done=true "
+        "if every competency has been covered."
+    )
+    answer = _structured(ctx, prompt, "interview_question", QUESTION_SCHEMA, _question)
+    if answer["done"] and turns:
+        return None
+    return answer["question"]
+
+
+def assess(ctx: RecruiterContext, candidate: dict, job: dict, turns: list[InterviewTurn]) -> InterviewAssessment:
+    prompt = (
+        f"{_briefing(ctx, candidate, job)}\n\nInterview transcript:\n{_transcript(turns)}\n\n"
+        "Score each Scorecard competency for this Job from 1 to 5 with a rationale quoting the candidate, and "
+        "recommend hire, next_round or no_hire following the Interview Guide's scoring rule."
+    )
+    return _structured(
+        ctx, prompt, "interview_assessment", ASSESSMENT_SCHEMA,
+        lambda answer: InterviewAssessment(candidate_id=candidate["id"], job_id=job["id"], turns=turns, **answer),
+    )
+
+
+def simulated_answer(ctx: RecruiterContext, candidate: dict, question: str) -> str:
+    """A Simulated candidate's answer, played by the System 1 baseline from the CV."""
+    completion = ctx.gateway.complete(
+        ctx.config.models.system_1_baseline,
+        f"CV:\n{candidate['text']}\n\nInterview question: {question}",
+        system=prompts.SIMULATED_CANDIDATE,
+    )
+    return completion.text
+
+
+class ModelOutputError(Exception):
+    """The model's structured output stayed invalid after a retry."""
+
+
+def _structured(ctx: RecruiterContext, prompt: str, name: str, schema: dict, build):
+    """Ask for structured output and build it; retry once with the validation error fed back."""
+    feedback, error = "", None
+    for _ in range(2):
+        completion = ctx.gateway.complete(
+            ctx.config.models.system_2_model, prompt + feedback, system=prompts.INTERVIEWER, response_schema=(name, schema)
+        )
+        try:
+            return build(json.loads(completion.text or ""))
+        except (ValueError, TypeError, KeyError) as invalid:  # includes JSON and Pydantic validation errors
+            error = invalid
+            feedback = f"\n\nYour previous answer was invalid ({invalid}). Answer again, following the schema and its ranges."
+    raise ModelOutputError(f"{name}: invalid model output after a retry: {error}")
+
+
+def _question(answer: dict) -> dict:
+    if not isinstance(answer.get("done"), bool) or not isinstance(answer.get("question"), str):
+        raise ValueError("expected a boolean `done` and a string `question`")
+    if not answer["done"] and not answer["question"].strip():
+        raise ValueError("`question` must not be empty when `done` is false")
+    return answer
+
+
+def _briefing(ctx: RecruiterContext, candidate: dict, job: dict) -> str:
+    guide = ctx.rag.document("policy:interview-guide")["text"]
+    scorecards = ctx.rag.document("policy:scorecards")["text"]
+    return (
+        f"{guide}\n\n{scorecards}\n\nJob ({job['id']}, occupation {job['metadata'].get('occupation')}):\n"
+        f"{job['title']}\n{job['text']}\n\nCandidate CV ({candidate['id']}):\n{candidate['text']}"
+    )
+
+
+def _transcript(turns: list[InterviewTurn]) -> str:
+    return "\n".join(f"Q{n}: {t.question}\nA{n}: {t.answer}" for n, t in enumerate(turns, start=1))
