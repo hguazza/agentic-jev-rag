@@ -11,8 +11,20 @@ from agentic_jev_rag.recruiter.rag_client import RagError
 from agentic_jev_rag.recruiter.schemas import ComplianceFinding, InterviewAssessment, ScreeningVerdict, Shortlist
 from agentic_jev_rag.system1 import System1TraceEntry
 
+# Phrases about how the Candidate delivered an answer; plain technical words (latency, pause) must not match.
 TIMING_TERMS = re.compile(
-    r"\b(pauses?|paused|latency|filler words?|fillers?|response time|speaking (?:rate|speed)|words per minute)\b", re.I
+    r"""\b(?:
+        long\s+pauses?
+        | pause[sd]?\s+before\s+(?:answering|responding|the\s+answer)
+        | filler\s+words?
+        | fillers
+        | speaking\s+(?:rate|speed)
+        | words\s+per\s+minute
+        | response\s+latency
+        | (?:hesitated|hesitation)\s+before\s+(?:answering|responding)
+        | took\s+(?:a\s+)?long(?:er)?\s+to\s+(?:answer|respond)
+    )\b""",
+    re.I | re.X,
 )
 REJECTION_QUESTION = "What must happen before a candidate rejected with the help of an AI system is told?"
 

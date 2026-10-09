@@ -40,3 +40,11 @@ def test_the_integrity_check_fails_when_a_score_cites_delivery_timing():
     finding = compliance.integrity_finding(assessment("Long pauses and no filler words suggest a scripted answer."))
 
     assert not finding.passed and "pauses" in finding.detail and "filler words" in finding.detail
+
+
+def test_the_integrity_check_ignores_technical_words_that_are_not_about_delivery():
+    finding = compliance.integrity_finding(
+        assessment("Reduced p99 latency from 800 ms to 120 ms and paused the migration to fix response time regressions.")
+    )
+
+    assert finding.passed
