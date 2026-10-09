@@ -1,12 +1,15 @@
 """Corpus records: loading every Collection from the committed corpus layout."""
 
 import json
+import json as _json
 from datetime import date
 from pathlib import Path
 
 import pytest
 
 from agentic_jev_rag.corpus.documents import Document, load_corpus, write_jsonl
+from agentic_jev_rag.corpus.dossier import add_dossiers
+from agentic_jev_rag.gateway import FakeModelGateway
 
 FIXTURE_CORPUS = Path(__file__).parent / "fixtures" / "corpus"
 
@@ -55,3 +58,29 @@ def test_written_documents_load_back_unchanged(tmp_path):
     write_jsonl([document], tmp_path / "jobs.jsonl")
 
     assert load_corpus(tmp_path) == [document]
+
+
+DOSSIER = {
+    "cover_letter": "I am applying for the Linux role.",
+    "linkedin": {"headline": "Sysadmin", "about": "Ten years of Linux.", "positions": [{"title": "Sysadmin", "company": "Acme", "years": "2016-2026"}]},
+}
+
+
+def test_dossiers_are_added_to_the_named_candidates_only(tmp_path):
+    path = tmp_path / "candidates.jsonl"
+    write_jsonl([
+        Document("C-1", "candidates", "A — CV", "Linux admin CV.", {"name": "A"}),
+        Document("C-2", "candidates", "B — CV", "Designer CV.", {"name": "B"}),
+    ], path)
+    prompts = []
+
+    def complete(model, prompt, system, schema):
+        prompts.append(prompt)
+        return _json.dumps(DOSSIER)
+
+    add_dossiers(path, ["C-1"], FakeModelGateway(complete_responder=complete), "fake/s2", discrepancy_ids=["C-1"])
+
+    by_id = {d.id: d for d in load_corpus(tmp_path)}
+    assert by_id["C-1"].metadata["dossier"] == DOSSIER and by_id["C-1"].metadata["name"] == "A"
+    assert "dossier" not in by_id["C-2"].metadata
+    assert "Linux admin CV." in prompts[0] and "deliberate discrepancies" in prompts[0]

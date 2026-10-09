@@ -192,3 +192,12 @@ def test_unscored_replies_get_no_signals(recruiter_context):
     reply(graph, "I partitioned Kafka topics.")
 
     assert len(prompts_for(gateway, "interview_signals")) == 1
+
+
+def test_the_dossier_text_has_the_cv_cover_letter_and_linkedin(recruiter_context):
+    ctx = recruiter_context(interview_gateway())
+
+    text = interviewer.dossier_text(ctx.rag.document("C-001"))
+
+    assert text.startswith("CV:\n")
+    assert "Cover letter:\n" in text and "LinkedIn:\n" in text and "Parcelo" in text.split("LinkedIn:\n")[1]

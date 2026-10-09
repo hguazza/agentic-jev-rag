@@ -79,8 +79,15 @@ def competencies(scorecards: str, occupation: str | None) -> tuple[str, ...]:
 
 
 def dossier_text(candidate: dict) -> str:
-    """The Candidate's Dossier as text."""
-    return f"CV:\n{candidate['text']}"
+    """The Candidate's Dossier as text: CV, then cover letter and LinkedIn profile when present."""
+    parts = [f"CV:\n{candidate['text']}"]
+    dossier = candidate.get("metadata", {}).get("dossier") or {}
+    if letter := dossier.get("cover_letter"):
+        parts.append(f"Cover letter:\n{letter}")
+    if linkedin := dossier.get("linkedin"):
+        positions = "\n".join(f"- {p['title']}, {p['company']} ({p['years']})" for p in linkedin.get("positions", []))
+        parts.append(f"LinkedIn:\n{linkedin.get('headline', '')}\n{linkedin.get('about', '')}\n{positions}".strip())
+    return "\n\n".join(parts)
 
 
 def next_question(

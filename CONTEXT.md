@@ -14,6 +14,10 @@ _Avoid_: index, namespace, database
 A person in the talent pool. Their Profile is their CV plus metadata (occupation, years of experience, location, skills, consent date).
 _Avoid_: applicant, user, resume (for the person)
 
+**Dossier**:
+Everything SwiftAI holds about a Candidate that an interview can draw on: the CV and, when present, a cover letter and a LinkedIn profile (synthetic, for demo Candidates).
+_Avoid_: file, record
+
 **Job**:
 An open or past role at a Client, with its description, required skills, seniority and location.
 _Avoid_: vacancy, position, req
