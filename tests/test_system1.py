@@ -9,6 +9,7 @@ from agentic_jev_rag.system1 import System1Error, make_deciders
 from agentic_jev_rag.system1.prompts import (
     GUARDRAIL_CRITERIA,
     ROUTE_CRITERIA,
+    SIGNALS_CONSISTENCY_CRITERIA,
     TURN_DEPTH_CRITERIA,
     TURN_INTELLIGIBILITY_CRITERIA,
 )
@@ -188,3 +189,32 @@ def test_an_invalid_turn_check_is_a_system1_error(config):
 
     with pytest.raises(System1Error):
         deciders_for(gateway, config)["llm"].turn_check("Q?", "A.")
+
+
+COMPETENCIES = ["Technical operations", "Problem solving", "Project delivery"]
+
+
+def test_llm_signals_read_one_boolean_per_competency_and_a_consistency(config):
+    gateway = llm_answering({"interview_signals": {"evidence": [True, False], "consistency": "adds"}})
+
+    decision = deciders_for(gateway, config)["llm"].interview_signals("I fixed logrotate.", COMPETENCIES, "CV: ...")
+
+    # A missing judgement counts as no evidence.
+    assert decision.evidence == {"Technical operations": 1.0, "Problem solving": 0.0, "Project delivery": 0.0}
+    assert decision.consistency == "adds"
+    assert decision.trace.decision == "interview_signals" and decision.trace.outcome == "adds; evidence 1/3"
+
+
+def test_jev_signals_ask_one_noul_per_competency_and_a_choice_in_one_call(config):
+    def answer_for(qid, question):
+        return choice("contradicts") if qid == "consistency" else {"type": "noul", "noul": 0.8 if qid == "competency_1" else 0.2}
+
+    gateway = jev_answering(answer_for)
+
+    decision = deciders_for(gateway, config)["jev"].interview_signals("I was at Acme.", COMPETENCIES, "CV: Parcelo")
+
+    assert decision.evidence == {"Technical operations": 0.2, "Problem solving": 0.8, "Project delivery": 0.2}
+    assert decision.consistency == "contradicts"
+    [(kind, _, payload)] = gateway.calls
+    assert payload["state"]["competencies"] == {"competency_0": "Technical operations", "competency_1": "Problem solving", "competency_2": "Project delivery"}
+    assert payload["questions"]["consistency"]["criteria"] == SIGNALS_CONSISTENCY_CRITERIA

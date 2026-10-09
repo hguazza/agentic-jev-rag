@@ -71,3 +71,14 @@ TURN_DEPTH_CRITERIA = {
     ),
     "shallow": "Generic or vague: claims or buzzwords without saying how, what they personally did, or what happened.",
 }
+
+SIGNALS_EVIDENCE_INSTRUCTIONS = "Does the candidate's interview answer show evidence of this Scorecard competency from their own work?"
+SIGNALS_CONSISTENCY_INSTRUCTIONS = (
+    "Compare the candidate's interview answer with their Dossier (CV, cover letter, LinkedIn profile). Ignore wording "
+    "and level of detail."
+)
+SIGNALS_CONSISTENCY_CRITERIA = {
+    "consistent": "Every factual claim in the answer matches the Dossier.",
+    "adds": "The answer adds experience or details the Dossier does not mention, without conflicting with it.",
+    "contradicts": "The answer conflicts with the Dossier: different employers, dates, roles or numbers, or a claim the Dossier contradicts.",
+}

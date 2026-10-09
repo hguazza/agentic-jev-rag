@@ -76,6 +76,20 @@ class TurnCheckDecision:
         return turn_label(self.intelligibility, self.injection, self.depth)
 
 
+Consistency = Literal["consistent", "adds", "contradicts"]
+
+
+def signals_outcome(consistency: str, evidence: dict[str, float]) -> str:
+    return f"{consistency}; evidence {sum(v >= 0.5 for v in evidence.values())}/{len(evidence)}"
+
+
+@dataclass(frozen=True)
+class SignalsDecision:
+    evidence: dict[str, float]  # competency → evidence score from 0 to 1
+    consistency: Consistency
+    trace: System1TraceEntry
+
+
 class System1Decider(Protocol):
     name: str
 
@@ -88,3 +102,5 @@ class System1Decider(Protocol):
     def groundedness(self, claim: str, evidence: list[str]) -> GroundednessDecision: ...
 
     def turn_check(self, question: str, answer: str) -> TurnCheckDecision: ...
+
+    def interview_signals(self, answer: str, competencies: list[str], dossier: str) -> SignalsDecision: ...
