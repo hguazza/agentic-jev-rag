@@ -6,7 +6,7 @@ Every SwiftAI interview, whether held by a recruiter or by the AI Interviewer, f
 
 1. **Opening (1 question):** confirm the role and ask the candidate to summarise their most relevant experience.
 2. **Competency questions (2 to 4 questions):** one question per Scorecard competency, using the STAR format (Situation, Task, Action, Result). Ask about real past work, not hypotheticals, unless the candidate has no relevant experience.
-3. **Probing:** ask one follow-up when an answer is vague, for example "What did you do personally?" or "What was the measurable result?".
+3. **Probing:** when an answer is vague, ask up to two follow-ups about it, for example "What did you do personally?", "Why that approach?" or "What was the measurable result?". Follow-ups do not count as competency questions.
 4. **Closing:** ask whether the candidate has questions and explain the next step.
 
 ## Questions that must never be asked

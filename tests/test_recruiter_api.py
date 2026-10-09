@@ -7,7 +7,8 @@ from fastapi.testclient import TestClient
 
 from agentic_jev_rag.gateway import ToolCall
 from agentic_jev_rag.recruiter.api import create_recruiter_app
-from tests.rag_scripts import by_agent, scripted_gateway
+from tests.interview_scripts import interview_gateway, interview_question, prompts_for
+from tests.rag_scripts import TURN_OUTCOMES, by_agent, scripted_gateway
 
 ADVANCE = {
     "decision": "advance",
@@ -51,11 +52,6 @@ def sourcer_submitting(*candidate_ids):
 def screener(model, messages, tools):
     candidate = re.search(r"Candidate (C-\d+)", messages[1]["content"]).group(1)
     return [ToolCall("scr", "submit_verdict", ADVANCE if candidate == "C-001" else REJECT)]
-
-
-def interview_question(prompt):
-    asked = int(re.search(r"Questions asked: (\d+)", prompt).group(1))
-    return {"done": asked >= 2, "question": f"Tell me about question {asked + 1}."}
 
 
 def recruiter_gateway(*, shortlist=("C-001", "C-003"), verdict="allowed", grounded=True):
@@ -195,3 +191,60 @@ def test_an_out_of_range_interview_assessment_is_retried_then_reported_as_a_502(
     always_bad.post(f"/interviews/{started['interview_id']}/reply", json={"message": "Kafka."})
     failed = always_bad.post(f"/interviews/{started['interview_id']}/reply", json={"message": "On-call."})
     assert failed.status_code == 502
+
+
+def test_a_reply_retried_after_a_502_does_not_record_the_retry_message_as_another_answer(client):
+    calls = {"n": 0}
+
+    def flaky(prompt):
+        calls["n"] += 1
+        if calls["n"] in (2, 3):  # the question after the first answer is invalid twice: the first reply is a 502
+            return {"done": False, "question": ""}
+        return interview_question(prompt)
+
+    api = client(scripted_gateway(structured={"interview_question": flaky, "interview_assessment": ASSESSMENT}))
+    started = api.post("/interviews", json={"candidate_id": "C-001", "job_id": "J-001"}).json()
+    reply = f"/interviews/{started['interview_id']}/reply"
+
+    failed = api.post(reply, json={"message": "I partitioned Kafka topics."})
+    retried = api.post(reply, json={"message": "RETRY MESSAGE, must not be recorded"})
+    done = api.post(reply, json={"message": "I owned on-call."})
+
+    assert failed.status_code == 502
+    assert retried.status_code == 200 and retried.json()["question"] == "Tell me about question 2."
+    assert [t["answer"] for t in done.json()["assessment"]["turns"]] == ["I partitioned Kafka topics.", "I owned on-call."]
+
+
+def test_a_failed_turn_check_is_a_502_and_replying_again_continues_without_duplicating(client):
+    failures = iter([None])  # the first Turn check returns invalid output
+
+    api = client(interview_gateway(turn=lambda answer: next(failures, TURN_OUTCOMES["substantive"])))
+    started = api.post("/interviews", json={"candidate_id": "C-001", "job_id": "J-001"}).json()
+    url = f"/interviews/{started['interview_id']}/reply"
+
+    assert api.post(url, json={"message": "I partitioned Kafka topics."}).status_code == 502
+    retried = api.post(url, json={"message": "I partitioned Kafka topics."}).json()
+    done = api.post(url, json={"message": "I owned on-call."}).json()
+
+    assert retried["question"] == "Tell me about question 2." and retried["question_kind"] == "question"
+    assert [t["answer"] for t in done["assessment"]["turns"]] == ["I partitioned Kafka topics.", "I owned on-call."]
+
+
+def test_reply_timing_is_kept_per_turn_reported_as_advisory_and_never_shown_to_the_assessor(client):
+    gateway = interview_gateway()
+    api = client(gateway)
+    started = api.post("/interviews", json={"candidate_id": "C-001", "job_id": "J-001"}).json()
+    url = f"/interviews/{started['interview_id']}/reply"
+    timing = {"response_latency_s": 12.5, "answer_duration_s": 40.0, "words_per_minute": 195.0, "filler_count": 0}
+
+    api.post(url, json={"message": "I partitioned Kafka topics.", "timing": timing})
+    done = api.post(url, json={"message": "I owned on-call."}).json()
+
+    assessment = done["assessment"]
+    assert assessment["turns"][0]["timing"] == timing and assessment["turns"][1]["timing"] is None
+    [observed] = assessment["integrity_signals"]["turns"]
+    assert observed["turn"] == 1 and observed["observation"]
+    assert "never affect" in assessment["integrity_signals"]["note"]
+    assert [f["check"] for f in done["findings"]] == ["integrity"] and done["findings"][0]["passed"]
+    prompt = prompts_for(gateway, "interview_assessment")[-1]
+    assert "12.5" not in prompt and "response_latency" not in prompt and "filler" not in prompt.lower()

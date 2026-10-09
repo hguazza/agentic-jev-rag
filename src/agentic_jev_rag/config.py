@@ -2,7 +2,7 @@
 
 import os
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from dotenv import find_dotenv, load_dotenv
@@ -21,6 +21,20 @@ class ModelConfig:
     embedding_model: str
     reranker: str
     jev_model: str
+    voice_host: str
+
+
+@dataclass(frozen=True)
+class VoiceConfig:
+    """The voice worker (LiveKit Inference model ids, which interview to hold) and the live interview's turn budgets."""
+
+    stt: str = "deepgram/nova-3"
+    tts: str = "cartesia/sonic-3"
+    default_candidate_id: str = "C-0040"
+    default_job_id: str = "J-037"
+    recruiter_url: str = "http://localhost:8001"
+    max_reprompts: int = 2
+    max_probes_per_topic: int = 2
 
 
 @dataclass(frozen=True)
@@ -36,22 +50,26 @@ class Config:
     rerank_candidates: int = 30
     system_1: str = "llm"
     rag_url: str = "http://localhost:8000"
+    voice: VoiceConfig = field(default_factory=VoiceConfig)
 
 
 def load_config(path: Path | None = None) -> Config:
     """Read a run config from TOML (default: `CONFIG` env or configs/recruiter.toml).
 
-    `QDRANT_URL`, `RAG_URL` and `SYSTEM_1` in the environment override the file.
+    `QDRANT_URL`, `RAG_URL`, `SYSTEM_1` and `RECRUITER_URL` in the environment override the file.
     """
     load_dotenv(find_dotenv(usecwd=True))  # never overrides variables already set
     path = Path(path or os.environ.get("CONFIG") or DEFAULT_CONFIG)
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     models = ModelConfig(**data.pop("models"))
+    voice = VoiceConfig(**data.pop("voice", {}))
+    if url := os.environ.get("RECRUITER_URL"):
+        voice = replace(voice, recruiter_url=url)
     if "collections" in data:
         data["collections"] = tuple(data["collections"])
-    for variable, field in ENVIRONMENT_OVERRIDES.items():
+    for variable, key in ENVIRONMENT_OVERRIDES.items():
         if value := os.environ.get(variable):
-            data[field] = value
+            data[key] = value
     if data.get("system_1", "llm") not in ("llm", "jev"):
         raise ValueError(f"system_1 must be 'llm' or 'jev', got {data['system_1']!r}")
-    return Config(models=models, **data)
+    return Config(models=models, voice=voice, **data)

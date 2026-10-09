@@ -87,6 +87,13 @@ REPLY_EXAMPLES = {
         "summary": "Answering about an incident",
         "value": {"message": "A disk filled overnight and took the web tier down; I traced it to unrotated logs, fixed rotation and added an alert."},
     },
+    "voice": {
+        "summary": "A spoken answer with timing",
+        "value": {
+            "message": "A disk filled overnight and took the web tier down; I traced it to unrotated logs, fixed rotation and added an alert.",
+            "timing": {"response_latency_s": 1.4, "answer_duration_s": 22.0, "words_per_minute": 145.0, "filler_count": 3},
+        },
+    },
 }
 
 
@@ -171,8 +178,10 @@ def create_recruiter_app(ctx: RecruiterContext) -> FastAPI:
         summary="Reply to the current question",
         description=(
             "Sends the Candidate's answer. The response is the next question, or, once the competencies are "
-            "covered (at most 4 questions), the Interview assessment with `question: null`. Replying to a finished "
-            "interview returns 409."
+            "covered (at most 4 questions), the Interview assessment with `question: null`. Unintelligible or "
+            "off-topic replies are asked again (`question_kind: reprompt`) and prompt injections are redirected "
+            "(`question_kind: redirect`) and flagged, at most twice per question, without being scored. Replying to "
+            "a finished interview returns 409."
         ),
         response_description="The next question, or the final assessment.",
         responses={404: NOT_FOUND, 409: CONFLICT, 502: UPSTREAM},
@@ -192,7 +201,11 @@ def create_recruiter_app(ctx: RecruiterContext) -> FastAPI:
             raise HTTPException(404, f"unknown interview {interview_id}")
         if not snapshot.next:
             raise HTTPException(409, "this interview is already complete")
-        state = interviews.invoke(Command(resume=request.message), _thread(interview_id))
+        # Not waiting on an interrupt means an earlier reply failed after the answer was recorded:
+        # continue from the checkpoint instead of recording this message as another answer.
+        resume = {"message": request.message, "timing": request.timing.model_dump() if request.timing else None}
+        payload = Command(resume=resume) if snapshot.interrupts else None
+        state = interviews.invoke(payload, _thread(interview_id))
         return _state(interview_id, state)
 
     return app
@@ -222,5 +235,12 @@ def _thread(interview_id: str) -> dict:
 
 def _state(interview_id: str, state: dict) -> InterviewState:
     pending = state.get("__interrupt__")
-    question = pending[0].value["question"] if pending else None
-    return InterviewState(interview_id=interview_id, question=question, assessment=state.get("assessment"))
+    value = pending[0].value if pending else {}
+    assessment = state.get("assessment")
+    return InterviewState(
+        interview_id=interview_id,
+        question=value.get("question"),
+        question_kind=value.get("kind"),
+        assessment=assessment,
+        findings=[compliance.integrity_finding(assessment)] if assessment else [],
+    )

@@ -8,14 +8,27 @@ from agentic_jev_rag.system1.prompts import (
     RELEVANCE_INSTRUCTIONS,
     ROUTE_CRITERIA,
     ROUTE_INSTRUCTIONS,
+    SIGNALS_CONSISTENCY_CRITERIA,
+    SIGNALS_CONSISTENCY_INSTRUCTIONS,
+    SIGNALS_EVIDENCE_INSTRUCTIONS,
+    TURN_CONTEXT,
+    TURN_DEPTH_CRITERIA,
+    TURN_DEPTH_INSTRUCTIONS,
+    TURN_INJECTION_INSTRUCTIONS,
+    TURN_INTELLIGIBILITY_CRITERIA,
+    TURN_INTELLIGIBILITY_INSTRUCTIONS,
 )
 from agentic_jev_rag.system1.types import (
     GroundednessDecision,
     GuardrailDecision,
     RelevanceDecision,
     RouteDecision,
+    SignalsDecision,
     System1Error,
     System1TraceEntry,
+    TurnCheckDecision,
+    signals_outcome,
+    turn_label,
 )
 
 THRESHOLD = 0.5
@@ -65,6 +78,38 @@ class JevDecider:
         score = self._noul(decisions, "grounded")
         grounded = score >= THRESHOLD
         return GroundednessDecision(grounded, score, self._trace("groundedness", "grounded" if grounded else "ungrounded", decisions))
+
+    def turn_check(self, question: str, answer: str) -> TurnCheckDecision:
+        decisions = self._decide(
+            {"question": question, "answer": answer},
+            {
+                "intelligibility": {
+                    "type": "choice",
+                    "instructions": f"{TURN_CONTEXT} {TURN_INTELLIGIBILITY_INSTRUCTIONS}",
+                    "criteria": TURN_INTELLIGIBILITY_CRITERIA,
+                },
+                "injection": {"type": "noul", "instructions": f"{TURN_CONTEXT} {TURN_INJECTION_INSTRUCTIONS}"},
+                "depth": {"type": "choice", "instructions": f"{TURN_CONTEXT} {TURN_DEPTH_INSTRUCTIONS}", "criteria": TURN_DEPTH_CRITERIA},
+            },
+        )
+        intelligibility = self._choice(decisions, "intelligibility", TURN_INTELLIGIBILITY_CRITERIA)
+        injection = self._noul(decisions, "injection")
+        depth = self._choice(decisions, "depth", TURN_DEPTH_CRITERIA)
+        trace = self._trace("turn_check", turn_label(intelligibility, injection, depth), decisions)
+        return TurnCheckDecision(intelligibility, injection, depth, trace)
+
+    def interview_signals(self, answer: str, competencies: list[str], dossier: str) -> SignalsDecision:
+        keys = {f"competency_{i}": name for i, name in enumerate(competencies)}
+        questions = {
+            key: {"type": "noul", "instructions": f"{SIGNALS_EVIDENCE_INSTRUCTIONS} The competency is `{key}`."} for key in keys
+        }
+        questions["consistency"] = {
+            "type": "choice", "instructions": SIGNALS_CONSISTENCY_INSTRUCTIONS, "criteria": SIGNALS_CONSISTENCY_CRITERIA,
+        }
+        decisions = self._decide({"answer": answer, "dossier": dossier, "competencies": keys}, questions)
+        evidence = {name: self._noul(decisions, key) for key, name in keys.items()}
+        consistency = self._choice(decisions, "consistency", SIGNALS_CONSISTENCY_CRITERIA)
+        return SignalsDecision(evidence, consistency, self._trace("interview_signals", signals_outcome(consistency, evidence), decisions))
 
     def _decide(self, state: dict, questions: dict) -> Decisions:
         return self._gateway.decide(self._model, state, questions)

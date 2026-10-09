@@ -14,6 +14,10 @@ _Avoid_: index, namespace, database
 A person in the talent pool. Their Profile is their CV plus metadata (occupation, years of experience, location, skills, consent date).
 _Avoid_: applicant, user, resume (for the person)
 
+**Dossier**:
+Everything SwiftAI holds about a Candidate that an interview can draw on: the CV and, when present, a cover letter and a LinkedIn profile (synthetic, for demo Candidates).
+_Avoid_: file, record
+
 **Job**:
 An open or past role at a Client, with its description, required skills, seniority and location.
 _Avoid_: vacancy, position, req
@@ -77,8 +81,23 @@ Advance or reject, with a score per Scorecard competency and the Evidence for ea
 **Interviewer**:
 The agent that holds a text interview with a Candidate, asking questions from the Job's competencies and the Candidate's history, and gives an Interview assessment.
 
+**Probe**:
+A forensic follow-up question in a live interview, asked when the Turn check finds an answer shallow: what the Candidate personally did, how, why, or with what result. At most two per topic.
+_Avoid_: drill-down
+
 **Simulated candidate**:
 An LLM playing a Candidate from their Profile, so interviews can run without a human. Used in demos and evaluations only.
+
+**Voice worker**:
+The LiveKit process that holds a voice interview: speech to text, turn detection, the Voice host, text to speech. It reaches the interview graph only through the Recruiter API.
+
+**Voice host**:
+The fast LLM that speaks for the Interviewer in a voice interview. It delivers the graph's questions and handles greetings, repeats and clarifications; it never decides what is asked or how the Candidate is assessed.
+_Avoid_: voice agent (for the host alone), bot
+
+**Integrity signal**:
+How a spoken answer was delivered (pause before it, duration, speaking rate, filler words), with an advisory observation for a human reviewer. Never used in scores or the recommendation (ADR 0013).
+_Avoid_: cheat detection, cheating score
 
 **Compliance**:
 The agent that checks the goal, the shortlist and the verdicts against Policy: fair hiring, Consent and grounded verdicts.
@@ -93,15 +112,17 @@ The Recruiter's final output for a goal: the shortlist, Screening verdicts, Inte
 A fast, typed judgement inside the pipeline that does not generate prose.
 _Avoid_: classification step, fast path
 
-The four System 1 decisions are:
+The System 1 decisions are:
 
 - **Route**: which Collection(s) to search for a question.
 - **Chunk relevance**: whether a retrieved chunk is kept as Evidence.
 - **Input guardrail**: whether a request is refused: discriminatory (selects or excludes people by a protected characteristic) or out of scope.
 - **Groundedness check**: whether an answer or verdict is supported by its Evidence.
+- **Turn check**: in a live interview, whether a reply is an answer, unintelligible, off-topic or a prompt injection, and whether an answer is substantive or shallow. One call, before the System 2 model is asked anything.
+- **Interview signals**: for each scored answer in a live interview, the evidence it shows for each Scorecard competency and whether it is consistent with, adds to, or contradicts the Dossier. Computed alongside the next question; advisory input to the assessment.
 
 **System 1 decider**:
-The component that makes the four System 1 decisions. It has two implementations: the LLM decider (the System 1 baseline) and the Jev decider. Everything else is the same whichever one runs.
+The component that makes the System 1 decisions. It has two implementations: the LLM decider (the System 1 baseline) and the Jev decider. Everything else is the same whichever one runs.
 
 **System 2 model**:
 The generative LLM that writes answers and drives the agents.

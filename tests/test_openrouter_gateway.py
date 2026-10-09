@@ -230,6 +230,32 @@ def test_chat_sends_messages_and_tools_as_given():
     assert body["tools"] == [MATCH_TOOL]
 
 
+def test_chat_completions_cap_output_tokens_so_openrouter_does_not_reserve_the_model_maximum():
+    gateway, requests = gateway_replying(
+        httpx.Response(200, json=recorded("chat_completion")),
+        httpx.Response(200, json=recorded("chat_tool_call")),
+    )
+
+    gateway.complete("anthropic/claude-haiku-4.5", "Question?")
+    gateway.chat("anthropic/claude-haiku-4.5", [{"role": "user", "content": "Find candidates."}])
+
+    assert [json.loads(r.content)["max_tokens"] for r in requests] == [16384, 16384]
+
+
+def test_output_token_cap_is_configurable():
+    requests: list[httpx.Request] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json=recorded("chat_completion"))
+
+    gateway = OpenRouterGateway("test-key", transport=httpx.MockTransport(handle), max_tokens=2048)
+
+    gateway.complete("anthropic/claude-haiku-4.5", "Question?")
+
+    assert json.loads(requests[0].content)["max_tokens"] == 2048
+
+
 def test_chat_result_turns_back_into_an_assistant_message_for_the_next_turn():
     gateway, _ = gateway_replying(httpx.Response(200, json=recorded("chat_tool_call")))
 
