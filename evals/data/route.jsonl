@@ -1,0 +1,40 @@
+{"id": "R-01", "question": "Which candidates have Salesforce experience?", "label": "candidates"}
+{"id": "R-02", "question": "Who in the pool knows Adobe InDesign?", "label": "candidates"}
+{"id": "R-03", "question": "Find an accountant with SAP experience.", "label": "candidates"}
+{"id": "R-04", "question": "Which HR candidates have run payroll?", "label": "candidates"}
+{"id": "R-05", "question": "Who has managed an IT help desk?", "label": "candidates"}
+{"id": "R-06", "question": "Show me designers with UX research experience.", "label": "candidates"}
+{"id": "R-07", "question": "Which candidates have more than ten years in sales?", "label": "candidates"}
+{"id": "R-08", "question": "Who has a CPA qualification?", "label": "candidates"}
+{"id": "R-09", "question": "Find people who have implemented Workday.", "label": "candidates"}
+{"id": "R-10", "question": "Which candidates are based in London?", "label": "candidates"}
+{"id": "R-11", "question": "What are the requirements for the Interaction Designer role?", "label": "jobs"}
+{"id": "R-12", "question": "Which open roles does Cobalt Retail Group have?", "label": "jobs"}
+{"id": "R-13", "question": "What benefits does the senior accountant job offer?", "label": "jobs"}
+{"id": "R-14", "question": "Is the IT support lead role remote?", "label": "jobs"}
+{"id": "R-15", "question": "What seniority is the account executive position?", "label": "jobs"}
+{"id": "R-16", "question": "Which jobs require Salesforce?", "label": "jobs"}
+{"id": "R-17", "question": "What does the HR business partner job involve day to day?", "label": "jobs"}
+{"id": "R-18", "question": "Which roles are based in New York?", "label": "jobs"}
+{"id": "R-19", "question": "What skills does the financial analyst job ask for?", "label": "jobs"}
+{"id": "R-20", "question": "Who is hiring for design roles?", "label": "jobs"}
+{"id": "R-21", "question": "Why was the candidate rejected for the designer role last month?", "label": "interviews"}
+{"id": "R-22", "question": "What scores did the finalists get for the sales role?", "label": "interviews"}
+{"id": "R-23", "question": "Which candidates were hired for finance roles?", "label": "interviews"}
+{"id": "R-24", "question": "What did the interviewer note about the candidate's prototyping skills?", "label": "interviews"}
+{"id": "R-25", "question": "Who withdrew from the recruitment process?", "label": "interviews"}
+{"id": "R-26", "question": "How did the screening call go for the IT manager candidate?", "label": "interviews"}
+{"id": "R-27", "question": "Which candidates received offers?", "label": "interviews"}
+{"id": "R-28", "question": "What feedback did candidates get in final interviews?", "label": "interviews"}
+{"id": "R-29", "question": "Which interviews flagged weak stakeholder communication?", "label": "interviews"}
+{"id": "R-30", "question": "How many candidates advanced after the first interview for J-010?", "label": "interviews"}
+{"id": "R-31", "question": "How long is candidate consent valid?", "label": "policies"}
+{"id": "R-32", "question": "What questions must interviewers never ask?", "label": "policies"}
+{"id": "R-33", "question": "What are the fast-track service levels?", "label": "policies"}
+{"id": "R-34", "question": "Does a human have to review AI rejections?", "label": "policies"}
+{"id": "R-35", "question": "What counts as indirect discrimination?", "label": "policies"}
+{"id": "R-36", "question": "How long do we keep interview notes?", "label": "policies"}
+{"id": "R-37", "question": "What competencies are on the finance scorecard?", "label": "policies"}
+{"id": "R-38", "question": "When should the Screener advance a candidate?", "label": "policies"}
+{"id": "R-39", "question": "How do candidates request erasure of their data?", "label": "policies"}
+{"id": "R-40", "question": "What must the AI interviewer tell candidates at the start?", "label": "policies"}

@@ -2,7 +2,7 @@
 .venv/
 __pycache__/
 .ipynb_checkpoints/
-data/
+/data/
 .scratch/
 .DS_Store
 .superpowers/
