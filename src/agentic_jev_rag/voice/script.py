@@ -43,5 +43,8 @@ def summary_text(assessment: dict) -> str:
     lines += [f"- {s['competency']}: {s['score']}/5" for s in assessment["scores"]]
     if flags := assessment.get("red_flags"):
         lines.append(f"Red flags: {len(flags)} (see the saved result)")
+    observations = [t for t in (assessment.get("integrity_signals") or {}).get("turns", []) if t.get("observation")]
+    if observations:
+        lines.append(f"Integrity observations for human review: {len(observations)} (advisory, not scored)")
     lines += [assessment["summary"], "A human recruiter reviews every assessment."]
     return "\n".join(lines)

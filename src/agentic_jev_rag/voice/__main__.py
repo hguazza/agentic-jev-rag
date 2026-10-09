@@ -72,6 +72,7 @@ async def interview(ctx: JobContext) -> None:
 
     @session.on("agent_state_changed")
     def on_agent_state(event) -> None:
+        voice.timer.agent_state(event.new_state)
         # The closing words have been spoken once the agent is back to listening after speaking them.
         nonlocal closing_started
         if not (voice.finished or voice.error):
@@ -80,6 +81,10 @@ async def interview(ctx: JobContext) -> None:
             closing_started = True
         elif event.new_state == "listening" and closing_started:
             done.set()
+
+    @session.on("user_state_changed")
+    def on_user_state(event) -> None:
+        voice.timer.user_state(event.new_state)
 
     session.on("close", lambda event: done.set())
 

@@ -31,3 +31,12 @@ def test_the_summary_lists_the_recommendation_scores_and_red_flags():
     assert text.splitlines()[0] == "Interview assessment: next_round"
     assert "- Technical operations: 4/5" in text
     assert "Red flags: 1" in text and "human recruiter reviews" in text
+
+
+def test_the_summary_mentions_advisory_integrity_observations_without_judging():
+    text = summary_text({
+        "recommendation": "hire", "scores": [], "summary": "Strong.",
+        "integrity_signals": {"note": "Advisory only.", "turns": [{"turn": 2, "observation": "A long pause..."}, {"turn": 3, "observation": None}]},
+    })
+
+    assert "Integrity observations for human review: 1 (advisory, not scored)" in text

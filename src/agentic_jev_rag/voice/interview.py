@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Awaitable, Callable
 
 from agentic_jev_rag.voice.recruiter_client import RecruiterClient, RecruiterError
+from agentic_jev_rag.voice.timing import TurnTimer
 
 
 @dataclass(frozen=True)
@@ -70,6 +71,7 @@ class VoiceInterview:
         self.results_dir = Path(results_dir)
         self.on_retry = on_retry
         self.buffer = AnswerBuffer()
+        self.timer = TurnTimer()
         self.interview_id: str | None = None
         self.current: Next | None = None
         self.transcript: list[dict] = []
@@ -95,9 +97,10 @@ class VoiceInterview:
         answer = self.buffer.take()
         if not answer:
             raise EmptyAnswer("the candidate has said nothing since the question was asked")
-        self.transcript.append({"question": self.current.question, "kind": self.current.kind, "answer": answer})
+        timing = self.timer.take(answer)
+        self.transcript.append({"question": self.current.question, "kind": self.current.kind, "answer": answer, "timing": timing})
         try:
-            state = await self._reply(answer)
+            state = await self._reply(answer, timing)
         except RecruiterError as error:
             self.error = str(error)
             self.save()
@@ -119,15 +122,15 @@ class VoiceInterview:
         path.write_text(json.dumps(result, indent=2, ensure_ascii=False))
         return path
 
-    async def _reply(self, answer: str) -> dict:
+    async def _reply(self, answer: str, timing: dict) -> dict:
         try:
-            return await self.client.reply(self.interview_id, answer)
+            return await self.client.reply(self.interview_id, answer, timing)
         except RecruiterError as error:
             if not error.retryable:
                 raise
             if self.on_retry:
                 await self.on_retry()
-            return await self.client.reply(self.interview_id, answer)
+            return await self.client.reply(self.interview_id, answer, timing)
 
     def _advance(self, state: dict) -> Next:
         self.current = Next(state["question"], state.get("question_kind") or "question", state.get("assessment"))

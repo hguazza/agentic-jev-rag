@@ -149,3 +149,24 @@ def test_saving_before_the_end_keeps_the_transcript_so_far(voice, tmp_path):
     saved = json.loads(path.read_text())
     assert path.parent == tmp_path and not saved["finished"]
     assert saved["transcript"][0]["answer"] == "I partitioned Kafka topics."
+
+
+def test_each_answer_is_sent_with_its_timing(voice, tmp_path):
+    interview = voice(interview_gateway())
+
+    async def scenario():
+        await interview.start()
+        interview.timer.agent_state("speaking")
+        interview.timer.agent_state("listening")
+        interview.timer.user_state("speaking")
+        interview.timer.user_state("listening")
+        interview.buffer.add("um I partitioned Kafka topics.")
+        await interview.submit()
+        interview.buffer.add("I owned on-call.")
+        return await interview.submit()
+
+    done = asyncio.run(scenario())
+
+    first = done.assessment["turns"][0]["timing"]
+    assert first["filler_count"] == 1 and first["response_latency_s"] is not None
+    assert interview.transcript[0]["timing"]["filler_count"] == 1
