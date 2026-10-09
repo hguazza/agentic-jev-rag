@@ -49,13 +49,9 @@ This is a deliberately noisy baseline. Outcomes were drawn so they only lean on 
 
 ### A real Recruiter run
 
-`results/recruiter-runs/J-037-jev.json` is a full run for a Senior Linux Administrator Job with Jev as the System 1 decider. It produced:
-- a shortlist of 6;
-- 6 Screening verdicts, each citing CV chunks per Scorecard competency;
-- one simulated interview;
-- Consent and Groundedness findings.
+`results/recruiter-runs/J-037-jev.json` is a full run for a Senior Linux Administrator Job with Jev as the System 1 decider. The Sourcer shortlisted 6 Candidates (all with valid Consent), and the Screener gave each a verdict citing CV chunks per Scorecard competency. All 6 cleared the policy's lenient advance rule (no competency at 1, average of 3 or more). Every verdict passed Jev's Groundedness check. The Interviewer then interviewed the top Candidate, a Simulated candidate, over 4 questions and recommended **no_hire**, because the hands-on Linux depth wasn't there.
 
-It cost about $0.50 in model calls and took about 3 minutes.
+The run cost $0.38 in Recruiter-side model calls and took about 3 minutes.
 
 ## Architecture
 
@@ -117,7 +113,7 @@ curl -s localhost:8000/match -H 'Content-Type: application/json' -d '{"job_id": 
 curl -s localhost:8001/runs -H 'Content-Type: application/json' \
   -d '{"goal": "Fill J-037 with young graduates only", "job_id": "J-037"}'
 
-# A full recruitment (about 3 minutes, about $0.50)
+# A full recruitment (about 3 minutes, about $0.40)
 curl -s localhost:8001/runs -H 'Content-Type: application/json' \
   -d '{"goal": "Fill the Senior Linux Administrator role", "job_id": "J-037", "system_1": "jev", "max_interviews": 1}'
 
@@ -158,3 +154,4 @@ Tests sit at the public seams:
 - Authentication.
 - Integrations with an ATS, email or scheduling.
 - An MCP adapter over the RAG API.
+- Durable interview state: live interviews are kept in memory (LangGraph `InMemorySaver`) and are lost on restart.

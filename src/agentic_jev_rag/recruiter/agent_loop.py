@@ -6,7 +6,8 @@ from typing import Any, Callable, Literal
 
 from agentic_jev_rag.gateway import ModelGateway
 
-TOOL_RESULT_LIMIT = 6000
+TOOL_RESULT_LIMIT = 12000
+TRUNCATED = "... [truncated]"
 NUDGE = "Call one of your tools, or submit your result with `{submit}`."
 
 
@@ -92,4 +93,6 @@ def _run_tool(tool: Tool | None, name: str, arguments: dict) -> Any:
 
 def _tool_message(call_id: str, content: Any) -> dict:
     text = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False, default=str)
-    return {"role": "tool", "tool_call_id": call_id, "content": text[:TOOL_RESULT_LIMIT]}
+    if len(text) > TOOL_RESULT_LIMIT:
+        text = text[: TOOL_RESULT_LIMIT - len(TRUNCATED)] + TRUNCATED
+    return {"role": "tool", "tool_call_id": call_id, "content": text}

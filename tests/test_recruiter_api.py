@@ -165,3 +165,33 @@ def test_interviews_need_a_known_id_and_a_candidate_with_valid_consent(client):
     assert api.post("/interviews/nope/reply", json={"message": "hi"}).status_code == 404
     assert api.post("/interviews", json={"candidate_id": "C-004", "job_id": "J-001"}).status_code == 409
     assert api.get("/health").json() == {"status": "ok"}
+
+
+def test_a_duplicated_candidate_in_the_shortlist_still_gets_a_compliance_review(client):
+    report = client(recruiter_gateway(shortlist=("C-001", "C-001", "C-003"))).post(
+        "/runs", json={"goal": "Fill the senior backend role", "job_id": "J-001"}
+    ).json()
+
+    assert [c["candidate_id"] for c in report["shortlist"]["candidates"]] == ["C-001", "C-003"]
+    assert {f["check"] for f in report["findings"]} >= {"consent", "groundedness"}
+
+
+def test_an_out_of_range_interview_assessment_is_retried_then_reported_as_a_502(client):
+    bad = {**ASSESSMENT, "scores": [{**ASSESSMENT["scores"][0], "score": 7}]}
+    calls = {"n": 0}
+
+    def flaky(prompt):
+        calls["n"] += 1
+        return bad if calls["n"] == 1 else ASSESSMENT
+
+    api = client(scripted_gateway(structured={"interview_question": interview_question, "interview_assessment": flaky}))
+    started = api.post("/interviews", json={"candidate_id": "C-001", "job_id": "J-001"}).json()
+    api.post(f"/interviews/{started['interview_id']}/reply", json={"message": "Kafka."})
+    done = api.post(f"/interviews/{started['interview_id']}/reply", json={"message": "On-call."})
+    assert done.status_code == 200 and done.json()["assessment"]["scores"][0]["score"] == 4
+
+    always_bad = client(scripted_gateway(structured={"interview_question": interview_question, "interview_assessment": bad}))
+    started = always_bad.post("/interviews", json={"candidate_id": "C-001", "job_id": "J-001"}).json()
+    always_bad.post(f"/interviews/{started['interview_id']}/reply", json={"message": "Kafka."})
+    failed = always_bad.post(f"/interviews/{started['interview_id']}/reply", json={"message": "On-call."})
+    assert failed.status_code == 502

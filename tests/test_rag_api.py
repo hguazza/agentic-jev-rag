@@ -151,3 +151,11 @@ def test_documents_are_served_by_id(client_for):
     assert client.get("/documents/J-001").json()["metadata"]["client"] == "Northwind Logistics"
     assert client.get("/documents/NOPE").status_code == 404
     assert client.get("/health").json() == {"status": "ok"}
+
+
+def test_filters_naming_an_unknown_candidate_or_job_are_404(client_for):
+    client = client_for()
+
+    assert client.post("/ask", json={"question": "Kafka?", "filters": {"candidate_id": "C-999"}}).status_code == 404
+    assert client.post("/search", json={"query": "Kafka", "filters": {"job_id": "J-999"}}).status_code == 404
+    assert client.post("/search", json={"query": "Kafka", "filters": {"candidate_id": "J-001"}}).status_code == 404

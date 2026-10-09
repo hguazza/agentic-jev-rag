@@ -35,12 +35,8 @@ def next_question(
         f"Questions asked: {len(turns)} of at most {max_questions}. Give the next question, or done=true "
         "if every competency has been covered."
     )
-    completion = ctx.gateway.complete(
-        ctx.config.models.system_2_model, prompt, system=prompts.INTERVIEWER,
-        response_schema=("interview_question", QUESTION_SCHEMA),
-    )
-    answer = json.loads(completion.text)
-    if answer.get("done") and turns:
+    answer = _structured(ctx, prompt, "interview_question", QUESTION_SCHEMA, _question)
+    if answer["done"] and turns:
         return None
     return answer["question"]
 
@@ -51,12 +47,9 @@ def assess(ctx: RecruiterContext, candidate: dict, job: dict, turns: list[Interv
         "Score each Scorecard competency for this Job from 1 to 5 with a rationale quoting the candidate, and "
         "recommend hire, next_round or no_hire following the Interview Guide's scoring rule."
     )
-    completion = ctx.gateway.complete(
-        ctx.config.models.system_2_model, prompt, system=prompts.INTERVIEWER,
-        response_schema=("interview_assessment", ASSESSMENT_SCHEMA),
-    )
-    return InterviewAssessment(
-        candidate_id=candidate["id"], job_id=job["id"], turns=turns, **json.loads(completion.text)
+    return _structured(
+        ctx, prompt, "interview_assessment", ASSESSMENT_SCHEMA,
+        lambda answer: InterviewAssessment(candidate_id=candidate["id"], job_id=job["id"], turns=turns, **answer),
     )
 
 
@@ -68,6 +61,33 @@ def simulated_answer(ctx: RecruiterContext, candidate: dict, question: str) -> s
         system=prompts.SIMULATED_CANDIDATE,
     )
     return completion.text
+
+
+class ModelOutputError(Exception):
+    """The model's structured output stayed invalid after a retry."""
+
+
+def _structured(ctx: RecruiterContext, prompt: str, name: str, schema: dict, build):
+    """Ask for structured output and build it; retry once with the validation error fed back."""
+    feedback, error = "", None
+    for _ in range(2):
+        completion = ctx.gateway.complete(
+            ctx.config.models.system_2_model, prompt + feedback, system=prompts.INTERVIEWER, response_schema=(name, schema)
+        )
+        try:
+            return build(json.loads(completion.text or ""))
+        except (ValueError, TypeError, KeyError) as invalid:  # includes JSON and Pydantic validation errors
+            error = invalid
+            feedback = f"\n\nYour previous answer was invalid ({invalid}). Answer again, following the schema and its ranges."
+    raise ModelOutputError(f"{name}: invalid model output after a retry: {error}")
+
+
+def _question(answer: dict) -> dict:
+    if not isinstance(answer.get("done"), bool) or not isinstance(answer.get("question"), str):
+        raise ValueError("expected a boolean `done` and a string `question`")
+    if not answer["done"] and not answer["question"].strip():
+        raise ValueError("`question` must not be empty when `done` is false")
+    return answer
 
 
 def _briefing(ctx: RecruiterContext, candidate: dict, job: dict) -> str:

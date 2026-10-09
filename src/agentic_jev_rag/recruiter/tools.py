@@ -16,6 +16,29 @@ FILTERS = {
 }
 
 
+EVIDENCE_TEXT = 400
+
+
+def _compact_chunk(chunk: dict) -> dict:
+    return {"chunk_id": chunk["chunk_id"], "section": chunk["section"], "text": chunk["text"][:EVIDENCE_TEXT]}
+
+
+def _compact_match(result: dict) -> dict:
+    """Match results trimmed for a model's context: ids, scores and short evidence, no bulky metadata."""
+    return {
+        "job_id": result["job_id"],
+        "candidates": [
+            {"candidate_id": c["candidate_id"], "name": c["name"], "score": round(c["score"], 3),
+             "evidence": [_compact_chunk(e) for e in c["evidence"]]}
+            for c in result["candidates"]
+        ],
+    }
+
+
+def _compact_search(result: dict) -> dict:
+    return {"chunks": [{**_compact_chunk(c), "document_id": c["document_id"], "collection": c["collection"]} for c in result["chunks"]]}
+
+
 def rag_tools(rag: RagClient) -> dict[str, Tool]:
     tools = [
         Tool(
@@ -26,13 +49,13 @@ def rag_tools(rag: RagClient) -> dict[str, Tool]:
                 "properties": {"query": {"type": "string"}, "collections": COLLECTIONS, "filters": FILTERS, "top_k": {"type": "integer"}},
                 "required": ["query"],
             },
-            rag.search,
+            lambda **kw: _compact_search(rag.search(**kw)),
         ),
         Tool(
             "match_candidates",
             "Rank Candidates (with valid consent) for a Job, each with the CV chunks that are their evidence.",
             {"type": "object", "properties": {"job_id": {"type": "string"}, "top_k": {"type": "integer"}}, "required": ["job_id"]},
-            rag.match,
+            lambda **kw: _compact_match(rag.match(**kw)),
         ),
         Tool(
             "ask",

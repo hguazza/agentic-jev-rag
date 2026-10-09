@@ -5,6 +5,8 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+from dotenv import find_dotenv, load_dotenv
+
 DEFAULT_CONFIG = Path(__file__).parents[2] / "configs" / "recruiter.toml"
 ENVIRONMENT_OVERRIDES = {"QDRANT_URL": "qdrant_url", "RAG_URL": "rag_url", "SYSTEM_1": "system_1"}
 
@@ -41,6 +43,7 @@ def load_config(path: Path | None = None) -> Config:
 
     `QDRANT_URL`, `RAG_URL` and `SYSTEM_1` in the environment override the file.
     """
+    load_dotenv(find_dotenv(usecwd=True))  # never overrides variables already set
     path = Path(path or os.environ.get("CONFIG") or DEFAULT_CONFIG)
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     models = ModelConfig(**data.pop("models"))
@@ -49,4 +52,6 @@ def load_config(path: Path | None = None) -> Config:
     for variable, field in ENVIRONMENT_OVERRIDES.items():
         if value := os.environ.get(variable):
             data[field] = value
+    if data.get("system_1", "llm") not in ("llm", "jev"):
+        raise ValueError(f"system_1 must be 'llm' or 'jev', got {data['system_1']!r}")
     return Config(models=models, **data)

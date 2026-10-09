@@ -52,7 +52,9 @@ def build_recruiter_graph(ctx: RecruiterContext, *, simulate_interviews: bool = 
         steps = state.get("supervisor_steps", 0)
         if steps >= MAX_SUPERVISOR_STEPS:
             note = AgentRunNote(agent="supervisor", subject="step limit reached", stopped_reason="step_limit", steps=steps, cost_usd=0.0)
-            return {"next": "finish", "notes": state.get("notes", []) + [note]}
+            # The Compliance review always runs before the report, even when the Supervisor ran out of steps.
+            next_step = "finish" if state.get("compliance_done") else "compliance"
+            return {"next": next_step, "notes": state.get("notes", []) + [note]}
         decision = supervisor.supervise(ctx, _progress(state, simulate_interviews, max_interviews))
         notes = state.get("notes", [])
         if decision.corrected_from:
@@ -67,7 +69,8 @@ def build_recruiter_graph(ctx: RecruiterContext, *, simulate_interviews: bool = 
     def source(state: RecruiterState) -> dict:
         shortlist, run = sourcer.source(ctx, state["job_id"], state["goal"])
         kept, findings = [], list(state.get("findings", []))
-        for entry in shortlist.candidates:
+        unique = {entry.candidate_id: entry for entry in reversed(shortlist.candidates)}
+        for entry in [e for e in shortlist.candidates if unique.get(e.candidate_id) is e]:
             consent = compliance.consent_finding(ctx, entry.candidate_id)
             if consent.passed:
                 kept.append(entry)

@@ -139,3 +139,31 @@ def test_a_submission_rejected_by_the_submit_tools_validator_is_sent_back_for_co
 
     assert result.submitted == {"answer": "OK"}
     assert "must not be blank" in next(m for m in result.transcript if m["role"] == "tool")["content"]
+
+
+def test_long_tool_results_are_cut_with_a_visible_marker():
+    big = Tool("big", "Big", {"type": "object", "properties": {}}, lambda: "x" * 50_000)
+    gateway = FakeModelGateway(chat_responder=turns([ToolCall("1", "big", {})], [ToolCall("2", "submit_answer", {"answer": "a"})]))
+
+    result = run_agent(gateway, "m", "s", "t", [big], SUBMIT)
+
+    content = next(m for m in result.transcript if m["role"] == "tool")["content"]
+    assert content.endswith("[truncated]")
+
+
+def test_rag_tools_return_compact_match_results_that_fit_without_truncation(indexed, config, qdrant, fixture_documents):
+    from agentic_jev_rag.recruiter.agent_loop import TOOL_RESULT_LIMIT
+    import json as _json
+
+    service = RagService(config, scripted_gateway(), qdrant, fixture_documents, today=lambda: date(2026, 10, 8))
+    tools = rag_tools(RagClient("http://rag", http=TestClient(create_rag_app(service))))
+
+    matched = tools["match_candidates"].fn(job_id="J-001", top_k=5)
+
+    assert len(_json.dumps(matched)) < TOOL_RESULT_LIMIT
+    evidence = matched["candidates"][0]["evidence"][0]
+    assert set(evidence) == {"chunk_id", "section", "text"}
+
+
+def test_an_empty_assistant_turn_is_sent_back_with_empty_text_not_null():
+    assert ChatResult(None, (), 0.0, 0.0).as_message() == {"role": "assistant", "content": ""}

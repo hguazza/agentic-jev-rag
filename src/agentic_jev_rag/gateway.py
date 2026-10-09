@@ -43,7 +43,9 @@ class ChatResult:
 
     def as_message(self) -> dict:
         """The OpenAI-format assistant message, to append to the conversation."""
-        message: dict[str, Any] = {"role": "assistant", "content": self.content}
+        # OpenAI-format endpoints reject a null content unless the turn carries tool calls.
+        content = self.content if self.content is not None or self.tool_calls else ""
+        message: dict[str, Any] = {"role": "assistant", "content": content}
         if self.tool_calls:
             message["tool_calls"] = [
                 {

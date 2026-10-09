@@ -15,6 +15,7 @@ from agentic_jev_rag.recruiter import compliance
 from agentic_jev_rag.recruiter.context import RecruiterContext
 from agentic_jev_rag.recruiter.graph import run_recruitment
 from agentic_jev_rag.recruiter.interview_graph import build_interview_graph
+from agentic_jev_rag.recruiter.interviewer import ModelOutputError
 from agentic_jev_rag.recruiter.rag_client import RagClient, RagError
 from agentic_jev_rag.recruiter.report import RecruitmentReport
 from agentic_jev_rag.recruiter.schemas import InterviewAssessment
@@ -51,6 +52,7 @@ def create_recruiter_app(ctx: RecruiterContext) -> FastAPI:
     @app.exception_handler(System1Error)
     @app.exception_handler(OpenRouterError)
     @app.exception_handler(RagError)
+    @app.exception_handler(ModelOutputError)
     def upstream(request: Request, error: Exception):
         return JSONResponse(status_code=502, content={"detail": str(error)})
 

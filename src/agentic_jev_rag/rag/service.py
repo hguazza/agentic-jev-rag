@@ -175,6 +175,9 @@ class RagService:
         return hits[:top_k]
 
     def _filters(self, filters: Filters) -> SearchFilters:
+        for document_id, collection in ((filters.candidate_id, "candidates"), (filters.job_id, "jobs")):
+            if document_id is not None and self.document(document_id).collection != collection:
+                raise UnknownDocument(document_id)
         # Consent is enforced on every Candidate search (Data Protection and Consent Policy).
         return SearchFilters(**filters.model_dump(), consent_valid_on=self._today())
 

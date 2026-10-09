@@ -44,3 +44,15 @@ def test_service_urls_and_system_1_can_come_from_the_environment(monkeypatch):
     assert config.qdrant_url == "http://qdrant:6333"
     assert config.rag_url == "http://rag-api:8000"
     assert config.system_1 == "jev"
+
+
+def test_settings_in_a_dotenv_file_are_honoured_when_running_on_the_host(tmp_path, monkeypatch):
+    import os
+
+    (tmp_path / ".env").write_text("SYSTEM_1=jev\n")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("SYSTEM_1", raising=False)
+    try:
+        assert load_config(RECRUITER).system_1 == "jev"
+    finally:
+        os.environ.pop("SYSTEM_1", None)
