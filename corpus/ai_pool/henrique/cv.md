@@ -2,7 +2,7 @@ AI ENGINEER
 São Paulo, SP, Brazil (remote) · github.com/hguazza
 
 Summary
-AI Engineer shipping production LLM agents in Python, FastAPI and LangGraph on AWS. Recently built an autonomous AI recruiter end to end: a five-agent LangGraph system (sourcing, screening, live interviewing, compliance) over a hybrid-search RAG service, deployed on AWS ECS, with a live voice interview demo on LiveKit. At work, I build multi-agent workflows with tool calling for a top-3 Brazilian bank on AWS Bedrock, and gate every deployment on eval benchmarks. I choose models by measuring accuracy, latency and cost, from distilling Claude Sonnet into Qwen3-32B (~90% of the score at 40x lower cost) to benchmarking a specialised decision model against a small LLM (~3.5x faster, ~20x cheaper).
+AI Engineer shipping production LLM agents in Python, FastAPI and LangGraph on AWS. Recently built an autonomous AI recruiter end to end: a five-agent LangGraph system (sourcing, screening, live interviewing, compliance) over a hybrid-search RAG service, with a live voice interview demo on LiveKit. At work, I build multi-agent workflows with tool calling for a top-3 Brazilian bank on AWS Bedrock, and gate every deployment on eval benchmarks. I choose models by measuring accuracy, latency and cost, from distilling Claude Sonnet into Qwen3-32B (~90% of the score at 40x lower cost) to benchmarking a specialised decision model against a small LLM (~3.5x faster, ~20x cheaper).
 
 Core Competencies
 - Multi-Agent Workflows & Tool Calling: LangGraph supervisor and fan-out/fan-in graphs, LangChain, LlamaIndex, tool calling with deterministic guardrails, prompt chains, structured outputs (Pydantic), MCP; OpenAI, Anthropic, Bedrock, OpenRouter.
@@ -47,7 +47,7 @@ Autonomous AI Recruiting Agent (independent project, GitHub)
 - Built the RAG API (Search, Match, Ask) on Qdrant: hybrid retrieval with dense and own sparse vectors fused with RRF, a reranker, and answers with citations, over 200 CVs, 60 jobs, 120 interview notes and hiring policies.
 - Enforced fairness and safety in code, not prompts: a guardrail refuses discriminatory goals before any agent runs, candidates without consent are excluded, agents finish through Pydantic-validated submit tools, and every screening verdict passes a groundedness check.
 - Benchmarked the pipeline's four fast decisions (routing, chunk relevance, input guardrail, groundedness) over 170 hand-labelled examples: Jev matched Claude Haiku 4.5 within 3 points while running ~3.5x faster (p50 0.44s vs 1.6s) and ~20x cheaper per decision.
-- Deployed both APIs on AWS ECS; a LiveKit voice agent drives the Interviewer API for live spoken interviews. 104 tests at the public seams, with the model gateway (cost, latency and retries per call) as the only fake.
+- Both APIs run in Docker Compose; a LiveKit voice agent drives the Interviewer API for live spoken interviews. 104 tests at the public seams, with the model gateway (cost, latency and retries per call) as the only fake.
 
 Education
 2026 - Agentic AI Program, Johns Hopkins University (online)

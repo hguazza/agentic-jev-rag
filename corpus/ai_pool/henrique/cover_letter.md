@@ -1,6 +1,6 @@
 Dear micro1 hiring team,
 
-I am applying for the AI/ML Engineer, Internal Platforms role. To show how I would work on Zara, I built an autonomous AI recruiting agent of my own (GitHub). In it, a LangGraph Supervisor hands work to Sourcer, Screener, Interviewer and Compliance agents, which reach a hybrid-search RAG service only through HTTP tools. Both FastAPI services run on AWS ECS, and a LiveKit voice agent drives the Interviewer for live spoken interviews.
+I am applying for the AI/ML Engineer, Internal Platforms role. To show how I would work on Zara, I built an autonomous AI recruiting agent of my own (GitHub). In it, a LangGraph Supervisor hands work to Sourcer, Screener, Interviewer and Compliance agents, which reach a hybrid-search RAG service only through HTTP tools. Both FastAPI services run in Docker, and a LiveKit voice agent drives the Interviewer for live spoken interviews.
 
 What I would bring to your recruiting agent:
 
