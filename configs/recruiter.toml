@@ -27,9 +27,10 @@ voice_host = "anthropic/claude-haiku-4.5"
 # LiveKit Inference model ids for speech (ADR 0012).
 stt = "deepgram/nova-3"
 tts = "cartesia/sonic-3"
-# Interview held when the Playground participant sets no candidate_id / job_id attributes.
-default_candidate_id = "C-0040"
-default_job_id = "J-037"
+# Interview held when the Playground participant sets no candidate_id / job_id attributes: the author for micro1's
+# role, the Showcase's live interview. The earlier demo pair is C-0040 for J-037.
+default_candidate_id = "C-0213"
+default_job_id = "J-061"
 recruiter_url = "http://localhost:8001"
 # Per question: reprompts or redirects before moving on. Per topic: forensic follow-ups.
 max_reprompts = 2
