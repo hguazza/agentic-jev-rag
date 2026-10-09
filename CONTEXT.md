@@ -105,6 +105,7 @@ The System 1 decisions are:
 - **Input guardrail**: whether a request is refused: discriminatory (selects or excludes people by a protected characteristic) or out of scope.
 - **Groundedness check**: whether an answer or verdict is supported by its Evidence.
 - **Turn check**: in a live interview, whether a reply is an answer, unintelligible, off-topic or a prompt injection, and whether an answer is substantive or shallow. One call, before the System 2 model is asked anything.
+- **Interview signals**: for each scored answer in a live interview, the evidence it shows for each Scorecard competency and whether it is consistent with, adds to, or contradicts the Dossier. Computed alongside the next question; advisory input to the assessment.
 
 **System 1 decider**:
 The component that makes the four System 1 decisions. It has two implementations: the LLM decider (the System 1 baseline) and the Jev decider. Everything else is the same whichever one runs.

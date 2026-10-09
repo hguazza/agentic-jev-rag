@@ -1,8 +1,12 @@
 """The live interview graph: briefing, Turn check routing, probes and Interview signals, with the fake gateway."""
 
+import threading
+
 from agentic_jev_rag.recruiter import interviewer
 from agentic_jev_rag.recruiter.interview_graph import build_interview_graph
-from tests.interview_scripts import PROBE, checking, interview_gateway, pending, prompts_for, reply, start
+from tests.interview_scripts import (
+    ASSESSMENT, PROBE, checking, interview_gateway, interview_question, pending, prompts_for, reply, start, thread,
+)
 
 
 def count_documents(ctx):
@@ -133,3 +137,58 @@ def test_a_probe_answered_with_specifics_is_sustained_and_moves_on(recruiter_con
     assert [(t.kind, t.competency) for t in assessment.turns] == [
         ("question", "System design"), ("probe", "System design"), ("question", "Delivery"),
     ]
+
+
+def test_signals_are_computed_in_parallel_with_the_next_question(recruiter_context):
+    asking, observing = threading.Event(), threading.Event()
+
+    def question(prompt):
+        if "Questions asked: 1 " in prompt:  # written in the same superstep as the signals for answer 1
+            asking.set()
+            assert observing.wait(timeout=5), "the next question waited for the signals"
+        return interview_question(prompt)
+
+    def consistency(answer):
+        observing.set()
+        assert asking.wait(timeout=5), "the signals waited for the next question"
+        return "consistent"
+
+    ctx = recruiter_context(interview_gateway(structured={"interview_question": question}, consistency=consistency))
+    graph = build_interview_graph(ctx)
+    start(graph, ctx)
+
+    after_first = reply(graph, "I partitioned Kafka topics.")
+
+    assert pending(after_first)["question"] == "Tell me about question 2."
+    assert [s["turn"] for s in graph.get_state(thread()).values["signals"]] == [1]
+
+
+def test_a_contradiction_with_the_dossier_is_confirmed_by_the_assessment_as_a_red_flag(recruiter_context):
+    assessment = {**ASSESSMENT, "contradictions": [{"quote": "I was at Acme for ten years.", "detail": "The CV says Parcelo, 2021-2026."}]}
+    gateway = interview_gateway(
+        structured={"interview_assessment": assessment},
+        consistency=lambda answer: "contradicts" if "Acme" in answer else "consistent",
+    )
+    ctx = recruiter_context(gateway)
+    graph = build_interview_graph(ctx)
+    start(graph, ctx)
+    reply(graph, "I was at Acme for ten years.")
+    done = reply(graph, "I owned on-call.")
+
+    [flag] = done["assessment"].red_flags
+    assert flag.kind == "contradiction" and "Parcelo" in flag.detail
+    prompt = prompts_for(gateway, "interview_assessment")[-1]
+    assert "Possible contradictions" in prompt and "I was at Acme for ten years." in prompt
+    assert [t.decision for t in done["assessment"].system_1_trace].count("interview_signals") == 2
+
+
+def test_unscored_replies_get_no_signals(recruiter_context):
+    gateway = interview_gateway(turn=checking({"asdf": "unintelligible"}))
+    ctx = recruiter_context(gateway)
+    graph = build_interview_graph(ctx)
+    start(graph, ctx)
+
+    reply(graph, "asdf")
+    reply(graph, "I partitioned Kafka topics.")
+
+    assert len(prompts_for(gateway, "interview_signals")) == 1

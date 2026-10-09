@@ -3,6 +3,7 @@
 Every reply gets a System 1 Turn check before the System 2 model is asked anything: unusable replies are
 reprompted and prompt injections redirected without a System 2 call (at most `max_reprompts` per question).
 Shallow answers get up to `max_probes_per_topic` forensic follow-ups, which do not count as topics.
+Interview signals for each scored answer run in the same superstep as the next question or probe, so they cost no latency.
 """
 
 from dataclasses import asdict
@@ -35,6 +36,7 @@ class InterviewGraphState(TypedDict, total=False):
     retries: int  # reprompts and redirects for the pending question
     check: str  # the last Turn check label
     red_flags: list[RedFlag]
+    signals: list[dict]  # Interview signals per scored answer
     trace: list[dict]  # System 1 trace entries, as dicts
     assessment: InterviewAssessment | None
 
@@ -71,12 +73,23 @@ def build_interview_graph(ctx: RecruiterContext, *, max_questions: int = 4):
             update["red_flags"] = state.get("red_flags", []) + [flag]
         return update
 
-    def after_check(state: InterviewGraphState) -> str:
+    def after_check(state: InterviewGraphState) -> str | list[str]:
         if state["check"] in UNUSABLE and state.get("retries", 0) < budgets.max_reprompts:
             return "redirect" if state["check"] == "injection" else "reprompt"
         if state["check"] == "shallow" and state.get("probes", 0) < budgets.max_probes_per_topic:
-            return "probe"
-        return "ask"
+            return ["probe", "observe"]
+        return ["ask", "observe"]
+
+    def observe(state: InterviewGraphState) -> dict:
+        last = state["turns"][-1]
+        if not last.scored:
+            return {}
+        decision = ctx.decider.interview_signals(last.answer, state.get("competencies", []), state["dossier"])
+        signal = {"turn": len(state["turns"]), "answer": last.answer, "evidence": decision.evidence, "consistency": decision.consistency}
+        return {"signals": state.get("signals", []) + [signal], "trace": state.get("trace", []) + [asdict(decision.trace)]}
+
+    def route_next(state: InterviewGraphState) -> dict:
+        return {}  # the fan-in point: runs once both branches of the superstep have written their updates
 
     def probe(state: InterviewGraphState) -> dict:
         question = interviewer.next_probe(ctx, state["briefing"], _scored(state))
@@ -90,7 +103,8 @@ def build_interview_graph(ctx: RecruiterContext, *, max_questions: int = 4):
 
     def assess(state: InterviewGraphState) -> dict:
         assessment = interviewer.assess(
-            ctx, state["briefing"], state["candidate"]["id"], state["job"]["id"], _scored(state), red_flags=state.get("red_flags", [])
+            ctx, state["briefing"], state["candidate"]["id"], state["job"]["id"], _scored(state), red_flags=state.get("red_flags", []),
+            signals=state.get("signals", []),
         )
         full = assessment.model_copy(
             update={"turns": state.get("turns", []), "system_1_trace": [TraceOut(**t) for t in state.get("trace", [])],
@@ -102,16 +116,20 @@ def build_interview_graph(ctx: RecruiterContext, *, max_questions: int = 4):
     for name, node in [
         ("brief", brief), ("ask", ask), ("wait_for_answer", wait_for_answer), ("turn_check", turn_check),
         ("reprompt", reprompt), ("redirect", redirect), ("probe", probe), ("assess", assess),
+        ("observe", observe), ("route_next", route_next),
     ]:
         graph.add_node(name, node)
     graph.add_edge(START, "brief")
     graph.add_edge("brief", "ask")
-    graph.add_conditional_edges("ask", lambda s: "assess" if s["question"] is None else "wait_for_answer", ["assess", "wait_for_answer"])
     graph.add_edge("wait_for_answer", "turn_check")
-    graph.add_conditional_edges("turn_check", after_check, ["reprompt", "redirect", "probe", "ask"])
+    graph.add_conditional_edges("turn_check", after_check, ["reprompt", "redirect", "probe", "ask", "observe"])
     graph.add_edge("reprompt", "wait_for_answer")
     graph.add_edge("redirect", "wait_for_answer")
-    graph.add_edge("probe", "wait_for_answer")
+    for node in ("ask", "probe", "observe"):
+        graph.add_edge(node, "route_next")
+    graph.add_conditional_edges(
+        "route_next", lambda s: "assess" if s["question"] is None else "wait_for_answer", ["assess", "wait_for_answer"]
+    )
     graph.add_edge("assess", END)
     return graph.compile(checkpointer=InMemorySaver())
 

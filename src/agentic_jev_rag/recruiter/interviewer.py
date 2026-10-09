@@ -26,8 +26,17 @@ ASSESSMENT_SCHEMA = {
         "scores": {"type": "array", "items": json_schema(CompetencyScore)},
         "recommendation": {"type": "string", "enum": ["hire", "no_hire", "next_round"]},
         "summary": {"type": "string"},
+        "contradictions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"quote": {"type": "string"}, "detail": {"type": "string"}},
+                "required": ["quote", "detail"],
+                "additionalProperties": False,
+            },
+        },
     },
-    "required": ["scores", "recommendation", "summary"],
+    "required": ["scores", "recommendation", "summary", "contradictions"],
     "additionalProperties": False,
 }
 
@@ -113,17 +122,38 @@ def probes_sustained(turns: list[InterviewTurn]) -> dict[str, int]:
 
 
 def assess(
-    ctx: RecruiterContext, briefing: str, candidate_id: str, job_id: str, turns: list[InterviewTurn], *, red_flags: list[RedFlag] = ()
+    ctx: RecruiterContext, briefing: str, candidate_id: str, job_id: str, turns: list[InterviewTurn],
+    *, red_flags: list[RedFlag] = (), signals: list[dict] = (),
 ) -> InterviewAssessment:
     prompt = (
-        f"{briefing}\n\nInterview transcript:\n{_transcript(turns)}\n\n"
+        f"{briefing}\n\nInterview transcript:\n{_transcript(turns)}\n\n{_signals_text(signals)}"
         "Score each Scorecard competency for this Job from 1 to 5 with a rationale quoting the candidate, and "
-        "recommend hire, next_round or no_hire following the Interview Guide's scoring rule."
+        "recommend hire, next_round or no_hire following the Interview Guide's scoring rule. In `contradictions`, list "
+        "only the flagged possible contradictions where the answer truly conflicts with the Dossier, quoting the "
+        "candidate and saying what the Dossier says; otherwise return an empty list."
     )
-    return _structured(
-        ctx, prompt, "interview_assessment", ASSESSMENT_SCHEMA,
-        lambda answer: InterviewAssessment(candidate_id=candidate_id, job_id=job_id, turns=turns, red_flags=list(red_flags), **answer),
-    )
+
+    def build(answer: dict) -> InterviewAssessment:
+        found = [RedFlag(kind="contradiction", **c) for c in answer.pop("contradictions", [])]
+        return InterviewAssessment(candidate_id=candidate_id, job_id=job_id, turns=turns, red_flags=[*red_flags, *found], **answer)
+
+    return _structured(ctx, prompt, "interview_assessment", ASSESSMENT_SCHEMA, build)
+
+
+def _signals_text(signals: list[dict]) -> str:
+    """Interview signals for the assessment: advisory evidence per answer, and the possible contradictions to check."""
+    if not signals:
+        return ""
+    lines = ["Evidence signals per answer (from a fast classifier; advisory, check them against the transcript):"]
+    lines += [
+        f"- Answer {s['turn']}: " + ", ".join(f"{name} {score:.1f}" for name, score in s["evidence"].items())
+        for s in signals
+    ]
+    flagged = [s for s in signals if s["consistency"] == "contradicts"]
+    if flagged:
+        lines.append("Possible contradictions with the Dossier:")
+        lines += [f"- Answer {s['turn']}: {s['answer']}" for s in flagged]
+    return "\n".join(lines) + "\n\n"
 
 
 def simulated_answer(ctx: RecruiterContext, candidate: dict, question: str) -> str:
