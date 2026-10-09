@@ -13,7 +13,7 @@ Vocabulary: `CONTEXT.md`. Design: `docs/superpowers/specs/2026-10-08-recruiter-d
 
 ### System 1 comparison: LLM decider vs Jev
 
-The LLM decider is the System 1 baseline (`anthropic/claude-haiku-4.5`, strict structured output). Jev is `typesafe/jev-1.13`. Both are called through OpenRouter with the same instructions, over 170 hand-labelled examples (`evals/data/`). Latency is end-to-end through OpenRouter.
+The LLM decider is the System 1 baseline (`anthropic/claude-haiku-4.5`, strict structured output). Jev is `typesafe/jev-1.13`. Both are called through OpenRouter with the same instructions, over 230 hand-labelled examples (`evals/data/`). Latency is end-to-end through OpenRouter.
 
 | decision | implementation | n | accuracy | p50 latency (s) | p95 latency (s) | mean cost ($) |
 |---|---|---|---|---|---|---|
@@ -25,6 +25,8 @@ The LLM decider is the System 1 baseline (`anthropic/claude-haiku-4.5`, strict s
 | chunk_relevance | jev | 40 | 98% | 0.452 | 0.503 | 0.0000174 |
 | groundedness | llm | 30 | 100% | 1.589 | 1.852 | 0.0003423 |
 | groundedness | jev | 30 | 97% | 0.422 | 0.499 | 0.0000167 |
+| turn_check | llm | 60 | 98% | 1.815 | 2.225 | 0.0007266 |
+| turn_check | jev | 60 | 95% | 0.570 | 0.634 | 0.0000311 |
 
 | decision | Jev speed-up (p50) | Jev cost per decision | accuracy gap (Jev − LLM) |
 |---|---|---|---|
@@ -32,6 +34,7 @@ The LLM decider is the System 1 baseline (`anthropic/claude-haiku-4.5`, strict s
 | route | 3.5× faster | 20× cheaper | +0 pts |
 | chunk_relevance | 3.6× faster | 22× cheaper | −3 pts |
 | groundedness | 3.8× faster | 20× cheaper | −3 pts |
+| turn_check | 3.2× faster | 23× cheaper | −3 pts |
 
 On these sets, Jev matches the LLM decider within 3 points on every decision, about 3.5× faster and about 20× cheaper per decision.
 
@@ -39,7 +42,8 @@ Caveats on reading these numbers:
 
 - **Small samples.** A single example moves accuracy by 2–3 points, and repeated runs vary by that much (the LLM guardrail scored 97% on an earlier run).
 - **Hardest guardrail case.** Both deciders allowed one indirect proxy: "must live within 2 km of the office even though the role is hybrid".
-- **Raw files:** `results/system1-2026-10-08/`. Re-run with `uv run python -m agentic_jev_rag.evals.system1`.
+- **Turn check.** Rows for `turn_check` come from `results/system1-2026-10-09/` (the other rows are from the earlier run). Jev missed no prompt injections and reprompted no real answers; the LLM decider reprompted or redirected one real answer.
+- **Raw files:** `results/system1-2026-10-08/` and `results/system1-2026-10-09/`. Re-run with `uv run python -m agentic_jev_rag.evals.system1`.
 
 ### Match evaluation
 
@@ -56,6 +60,8 @@ The run cost $0.38 in Recruiter-side model calls and took about 3 minutes.
 ## Voice interview
 
 The Interviewer can hold a live **voice** interview through LiveKit (ADR 0012). A LiveKit Agents worker turns speech into text, and a fast Voice host LLM asks the interview graph's questions out loud; the graph still decides every question and the assessment, and answers reach it as the exact transcript. See `docs/voice-demo.md` to run it from the LiveKit Agents Playground. It needs a LiveKit Cloud project (free tier) in `.env`.
+
+Every reply gets a **Turn check**, a System 1 decision (intelligible, prompt injection, substantive or shallow) made before the System 2 model is asked anything: gibberish is reprompted and injections redirected without a System 2 call, and shallow answers get up to two forensic **probes**. **Interview signals** (evidence per competency, consistency with the Dossier) are computed in the same LangGraph superstep as the next question, so they add no latency. Delivery timings are reported as advisory **integrity signals** and never scored (ADR 0013).
 
 ## Architecture
 

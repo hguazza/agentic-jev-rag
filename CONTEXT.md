@@ -89,6 +89,10 @@ The LiveKit process that holds a voice interview: speech to text, turn detection
 The fast LLM that speaks for the Interviewer in a voice interview. It delivers the graph's questions and handles greetings, repeats and clarifications; it never decides what is asked or how the Candidate is assessed.
 _Avoid_: voice agent (for the host alone), bot
 
+**Integrity signal**:
+How a spoken answer was delivered (pause before it, duration, speaking rate, filler words), with an advisory observation for a human reviewer. Never used in scores or the recommendation (ADR 0013).
+_Avoid_: cheat detection, cheating score
+
 **Compliance**:
 The agent that checks the goal, the shortlist and the verdicts against Policy: fair hiring, Consent and grounded verdicts.
 _Avoid_: guardrail (for the whole agent)
