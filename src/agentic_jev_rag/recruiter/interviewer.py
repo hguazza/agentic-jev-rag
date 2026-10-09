@@ -1,6 +1,8 @@
 """The Interviewer: a text interview built from the Job, the CV and SwiftAI's Interview Guide."""
 
 import json
+import re
+from dataclasses import dataclass
 
 from agentic_jev_rag.recruiter import prompts
 from agentic_jev_rag.recruiter.context import RecruiterContext
@@ -24,14 +26,48 @@ ASSESSMENT_SCHEMA = {
 }
 
 
-def next_question(
-    ctx: RecruiterContext, candidate: dict, job: dict, turns: list[InterviewTurn], max_questions: int = 4
-) -> str | None:
+@dataclass(frozen=True)
+class Briefing:
+    """What the Interviewer reads before an interview, fetched once: the guide, the Scorecards, the Job and the Dossier."""
+
+    text: str
+    competencies: tuple[str, ...]
+    dossier: str
+
+
+def brief(ctx: RecruiterContext, candidate: dict, job: dict) -> Briefing:
+    guide = ctx.rag.document("policy:interview-guide")["text"]
+    scorecards = ctx.rag.document("policy:scorecards")["text"]
+    dossier = dossier_text(candidate)
+    text = (
+        f"{guide}\n\n{scorecards}\n\nJob ({job['id']}, occupation {job['metadata'].get('occupation')}):\n"
+        f"{job['title']}\n{job['text']}\n\nCandidate Dossier ({candidate['id']}):\n{dossier}"
+    )
+    return Briefing(text, competencies(scorecards, job["metadata"].get("occupation")), dossier)
+
+
+def competencies(scorecards: str, occupation: str | None) -> tuple[str, ...]:
+    """The Scorecard competencies for an occupation (`## Information technology` <-> `information_technology`)."""
+    section, names = None, []
+    for line in scorecards.splitlines():
+        if line.startswith("## "):
+            section = line[3:].strip().lower().replace(" ", "_")
+        elif section == occupation and (match := re.match(r"- \*\*(.+?):\*\*", line.strip())):
+            names.append(match.group(1))
+    return tuple(names)
+
+
+def dossier_text(candidate: dict) -> str:
+    """The Candidate's Dossier as text."""
+    return f"CV:\n{candidate['text']}"
+
+
+def next_question(ctx: RecruiterContext, briefing: str, turns: list[InterviewTurn], max_questions: int = 4) -> str | None:
     """The next question to ask, or None when the interview is complete."""
     if len(turns) >= max_questions:
         return None
     prompt = (
-        f"{_briefing(ctx, candidate, job)}\n\nInterview so far:\n{_transcript(turns) or '(not started)'}\n\n"
+        f"{briefing}\n\nInterview so far:\n{_transcript(turns) or '(not started)'}\n\n"
         f"Questions asked: {len(turns)} of at most {max_questions}. Give the next question, or done=true "
         "if every competency has been covered."
     )
@@ -41,15 +77,17 @@ def next_question(
     return answer["question"]
 
 
-def assess(ctx: RecruiterContext, candidate: dict, job: dict, turns: list[InterviewTurn]) -> InterviewAssessment:
+def assess(
+    ctx: RecruiterContext, briefing: str, candidate_id: str, job_id: str, turns: list[InterviewTurn]
+) -> InterviewAssessment:
     prompt = (
-        f"{_briefing(ctx, candidate, job)}\n\nInterview transcript:\n{_transcript(turns)}\n\n"
+        f"{briefing}\n\nInterview transcript:\n{_transcript(turns)}\n\n"
         "Score each Scorecard competency for this Job from 1 to 5 with a rationale quoting the candidate, and "
         "recommend hire, next_round or no_hire following the Interview Guide's scoring rule."
     )
     return _structured(
         ctx, prompt, "interview_assessment", ASSESSMENT_SCHEMA,
-        lambda answer: InterviewAssessment(candidate_id=candidate["id"], job_id=job["id"], turns=turns, **answer),
+        lambda answer: InterviewAssessment(candidate_id=candidate_id, job_id=job_id, turns=turns, **answer),
     )
 
 
@@ -88,15 +126,6 @@ def _question(answer: dict) -> dict:
     if not answer["done"] and not answer["question"].strip():
         raise ValueError("`question` must not be empty when `done` is false")
     return answer
-
-
-def _briefing(ctx: RecruiterContext, candidate: dict, job: dict) -> str:
-    guide = ctx.rag.document("policy:interview-guide")["text"]
-    scorecards = ctx.rag.document("policy:scorecards")["text"]
-    return (
-        f"{guide}\n\n{scorecards}\n\nJob ({job['id']}, occupation {job['metadata'].get('occupation')}):\n"
-        f"{job['title']}\n{job['text']}\n\nCandidate CV ({candidate['id']}):\n{candidate['text']}"
-    )
 
 
 def _transcript(turns: list[InterviewTurn]) -> str:
