@@ -192,7 +192,10 @@ def create_recruiter_app(ctx: RecruiterContext) -> FastAPI:
             raise HTTPException(404, f"unknown interview {interview_id}")
         if not snapshot.next:
             raise HTTPException(409, "this interview is already complete")
-        state = interviews.invoke(Command(resume=request.message), _thread(interview_id))
+        # Not waiting on an interrupt means an earlier reply failed after the answer was recorded:
+        # continue from the checkpoint instead of recording this message as another answer.
+        payload = Command(resume=request.message) if snapshot.interrupts else None
+        state = interviews.invoke(payload, _thread(interview_id))
         return _state(interview_id, state)
 
     return app
