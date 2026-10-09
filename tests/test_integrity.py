@@ -48,3 +48,13 @@ def test_the_integrity_check_ignores_technical_words_that_are_not_about_delivery
     )
 
     assert finding.passed
+
+
+def test_the_integrity_check_ignores_response_latency_as_a_technical_metric():
+    assert compliance.integrity_finding(assessment("Reduced response latency from 800 ms to 120 ms.")).passed
+
+
+def test_the_integrity_check_fails_when_a_score_says_the_candidate_took_a_long_time_to_respond():
+    finding = compliance.integrity_finding(assessment("Took a long time to respond to each question."))
+
+    assert not finding.passed and "took a long time to respond" in finding.detail

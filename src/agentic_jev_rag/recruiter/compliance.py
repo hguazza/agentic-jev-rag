@@ -20,9 +20,8 @@ TIMING_TERMS = re.compile(
         | fillers
         | speaking\s+(?:rate|speed)
         | words\s+per\s+minute
-        | response\s+latency
         | (?:hesitated|hesitation)\s+before\s+(?:answering|responding)
-        | took\s+(?:a\s+)?long(?:er)?\s+to\s+(?:answer|respond)
+        | took\s+(?:a\s+)?long(?:er)?\s+(?:time\s+)?to\s+(?:answer|respond)
     )\b""",
     re.I | re.X,
 )
