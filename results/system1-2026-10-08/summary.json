@@ -1,0 +1,82 @@
+{
+  "llm": {
+    "input_guardrail": {
+      "n": 60,
+      "accuracy": 0.9666666666666667,
+      "errors": 0,
+      "latency_p50_s": 1.6541892500026734,
+      "latency_p95_s": 2.1527205931408386,
+      "cost_total_usd": 0.031155,
+      "cost_mean_usd": 0.00051925,
+      "missed_discriminatory": 1,
+      "wrongly_refused": 1
+    },
+    "route": {
+      "n": 40,
+      "accuracy": 1.0,
+      "errors": 0,
+      "latency_p50_s": 1.5820616250057356,
+      "latency_p95_s": 2.8099177452029833,
+      "cost_total_usd": 0.015253000000000001,
+      "cost_mean_usd": 0.000381325
+    },
+    "chunk_relevance": {
+      "n": 40,
+      "accuracy": 1.0,
+      "errors": 0,
+      "latency_p50_s": 1.692579291498987,
+      "latency_p95_s": 2.901158437205595,
+      "cost_total_usd": 0.01532,
+      "cost_mean_usd": 0.000383
+    },
+    "groundedness": {
+      "n": 30,
+      "accuracy": 0.9666666666666667,
+      "errors": 0,
+      "latency_p50_s": 1.6026874790040893,
+      "latency_p95_s": 1.988215194053919,
+      "cost_total_usd": 0.008799,
+      "cost_mean_usd": 0.0002933
+    }
+  },
+  "jev": {
+    "input_guardrail": {
+      "n": 60,
+      "accuracy": 0.9833333333333333,
+      "errors": 0,
+      "latency_p50_s": 0.44952047950209817,
+      "latency_p95_s": 1.0133106417044473,
+      "cost_total_usd": 0.001387554,
+      "cost_mean_usd": 2.31259e-05,
+      "missed_discriminatory": 1,
+      "wrongly_refused": 0
+    },
+    "route": {
+      "n": 40,
+      "accuracy": 1.0,
+      "errors": 0,
+      "latency_p50_s": 0.4697061874976498,
+      "latency_p95_s": 0.8455004791561772,
+      "cost_total_usd": 0.000749406,
+      "cost_mean_usd": 1.873515e-05
+    },
+    "chunk_relevance": {
+      "n": 40,
+      "accuracy": 0.975,
+      "errors": 0,
+      "latency_p50_s": 0.4520242504950147,
+      "latency_p95_s": 0.5870551476007676,
+      "cost_total_usd": 0.000696948,
+      "cost_mean_usd": 1.74237e-05
+    },
+    "groundedness": {
+      "n": 30,
+      "accuracy": 0.9333333333333333,
+      "errors": 0,
+      "latency_p50_s": 0.45551008349866606,
+      "latency_p95_s": 0.5240683229487331,
+      "cost_total_usd": 0.000442596,
+      "cost_mean_usd": 1.4753200000000001e-05
+    }
+  }
+}
