@@ -16,7 +16,8 @@ from langgraph.types import interrupt
 from agentic_jev_rag.rag.models import TraceOut
 from agentic_jev_rag.recruiter import interviewer
 from agentic_jev_rag.recruiter.context import RecruiterContext
-from agentic_jev_rag.recruiter.schemas import InterviewAssessment, InterviewTurn, RedFlag
+from agentic_jev_rag.recruiter.integrity import integrity_signals
+from agentic_jev_rag.recruiter.schemas import InterviewAssessment, InterviewTurn, RedFlag, TurnTiming
 
 UNUSABLE = ("unintelligible", "off_topic", "injection")
 
@@ -60,8 +61,13 @@ def build_interview_graph(ctx: RecruiterContext, *, max_questions: int = 4):
 
     def wait_for_answer(state: InterviewGraphState) -> dict:
         kind = state.get("question_kind", "question")
-        answer = interrupt({"question": state["question"], "kind": kind})
-        return {"turns": state.get("turns", []) + [InterviewTurn(question=state["question"], answer=answer, kind=kind, competency=state.get("competency", ""))]}
+        reply = interrupt({"question": state["question"], "kind": kind})
+        message, timing = (reply["message"], reply.get("timing")) if isinstance(reply, dict) else (reply, None)
+        turn = InterviewTurn(
+            question=state["question"], answer=message, kind=kind, competency=state.get("competency", ""),
+            timing=TurnTiming(**timing) if timing else None,
+        )
+        return {"turns": state.get("turns", []) + [turn]}
 
     def turn_check(state: InterviewGraphState) -> dict:
         *earlier, last = state["turns"]
@@ -108,7 +114,8 @@ def build_interview_graph(ctx: RecruiterContext, *, max_questions: int = 4):
         )
         full = assessment.model_copy(
             update={"turns": state.get("turns", []), "system_1_trace": [TraceOut(**t) for t in state.get("trace", [])],
-                    "probes_sustained": interviewer.probes_sustained(state.get("turns", []))}
+                    "probes_sustained": interviewer.probes_sustained(state.get("turns", [])),
+                    "integrity_signals": integrity_signals(state.get("turns", []))}
         )
         return {"assessment": full, "question": None}
 

@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from agentic_jev_rag.gateway import ToolCall
 from agentic_jev_rag.recruiter.api import create_recruiter_app
-from tests.interview_scripts import interview_gateway, interview_question
+from tests.interview_scripts import interview_gateway, interview_question, prompts_for
 from tests.rag_scripts import TURN_OUTCOMES, by_agent, scripted_gateway
 
 ADVANCE = {
@@ -228,3 +228,23 @@ def test_a_failed_turn_check_is_a_502_and_replying_again_continues_without_dupli
 
     assert retried["question"] == "Tell me about question 2." and retried["question_kind"] == "question"
     assert [t["answer"] for t in done["assessment"]["turns"]] == ["I partitioned Kafka topics.", "I owned on-call."]
+
+
+def test_reply_timing_is_kept_per_turn_reported_as_advisory_and_never_shown_to_the_assessor(client):
+    gateway = interview_gateway()
+    api = client(gateway)
+    started = api.post("/interviews", json={"candidate_id": "C-001", "job_id": "J-001"}).json()
+    url = f"/interviews/{started['interview_id']}/reply"
+    timing = {"response_latency_s": 12.5, "answer_duration_s": 40.0, "words_per_minute": 195.0, "filler_count": 0}
+
+    api.post(url, json={"message": "I partitioned Kafka topics.", "timing": timing})
+    done = api.post(url, json={"message": "I owned on-call."}).json()
+
+    assessment = done["assessment"]
+    assert assessment["turns"][0]["timing"] == timing and assessment["turns"][1]["timing"] is None
+    [observed] = assessment["integrity_signals"]["turns"]
+    assert observed["turn"] == 1 and observed["observation"]
+    assert "never affect" in assessment["integrity_signals"]["note"]
+    assert [f["check"] for f in done["findings"]] == ["integrity"] and done["findings"][0]["passed"]
+    prompt = prompts_for(gateway, "interview_assessment")[-1]
+    assert "12.5" not in prompt and "response_latency" not in prompt and "filler" not in prompt.lower()

@@ -87,6 +87,13 @@ REPLY_EXAMPLES = {
         "summary": "Answering about an incident",
         "value": {"message": "A disk filled overnight and took the web tier down; I traced it to unrotated logs, fixed rotation and added an alert."},
     },
+    "voice": {
+        "summary": "A spoken answer with timing",
+        "value": {
+            "message": "A disk filled overnight and took the web tier down; I traced it to unrotated logs, fixed rotation and added an alert.",
+            "timing": {"response_latency_s": 1.4, "answer_duration_s": 22.0, "words_per_minute": 145.0, "filler_count": 3},
+        },
+    },
 }
 
 
@@ -196,7 +203,8 @@ def create_recruiter_app(ctx: RecruiterContext) -> FastAPI:
             raise HTTPException(409, "this interview is already complete")
         # Not waiting on an interrupt means an earlier reply failed after the answer was recorded:
         # continue from the checkpoint instead of recording this message as another answer.
-        payload = Command(resume=request.message) if snapshot.interrupts else None
+        resume = {"message": request.message, "timing": request.timing.model_dump() if request.timing else None}
+        payload = Command(resume=resume) if snapshot.interrupts else None
         state = interviews.invoke(payload, _thread(interview_id))
         return _state(interview_id, state)
 
@@ -228,6 +236,11 @@ def _thread(interview_id: str) -> dict:
 def _state(interview_id: str, state: dict) -> InterviewState:
     pending = state.get("__interrupt__")
     value = pending[0].value if pending else {}
+    assessment = state.get("assessment")
     return InterviewState(
-        interview_id=interview_id, question=value.get("question"), question_kind=value.get("kind"), assessment=state.get("assessment")
+        interview_id=interview_id,
+        question=value.get("question"),
+        question_kind=value.get("kind"),
+        assessment=assessment,
+        findings=[compliance.integrity_finding(assessment)] if assessment else [],
     )

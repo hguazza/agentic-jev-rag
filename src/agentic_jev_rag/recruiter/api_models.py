@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from agentic_jev_rag.recruiter.schemas import InterviewAssessment
+from agentic_jev_rag.recruiter.schemas import ComplianceFinding, InterviewAssessment, TurnTiming
 
 
 class RunRequest(BaseModel):
@@ -43,6 +43,9 @@ class InterviewReply(BaseModel):
     """The Candidate's answer to the current question."""
 
     message: str = Field(min_length=1, description="The Candidate's answer, in plain text.")
+    timing: TurnTiming | None = Field(
+        default=None, description="Delivery timing measured by a voice client. Advisory only: reported for human review, never scored."
+    )
 
 
 class InterviewState(BaseModel):
@@ -57,3 +60,6 @@ class InterviewState(BaseModel):
         "interview is over.",
     )
     assessment: InterviewAssessment | None = Field(description="The Interviewer's assessment; set once the interview is over.")
+    findings: list[ComplianceFinding] = Field(
+        default_factory=list, description="Compliance findings on the assessment, once the interview is over."
+    )
