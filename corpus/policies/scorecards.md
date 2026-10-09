@@ -9,6 +9,13 @@ Each job is assessed on the competencies for its occupation, each scored from 1 
 - **Delivery:** ships working software to production and owns it afterwards.
 - **Collaboration:** works well in code review, with product and across teams.
 
+## Information technology
+
+- **Technical operations:** runs and supports infrastructure, networks, systems and end-user technology reliably.
+- **Problem solving:** diagnoses incidents and fixes root causes, not just symptoms.
+- **Project delivery:** plans and delivers IT projects and rollouts on time.
+- **Stakeholder service:** communicates clearly with users and business teams and manages vendors.
+
 ## Data science
 
 - **Statistics and modelling:** chooses and validates models appropriately.

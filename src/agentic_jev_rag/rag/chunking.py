@@ -9,6 +9,9 @@ SECTION_NAMES = (
     "summary", "profile", "objective", "experience", "work history", "work experience", "employment",
     "professional experience", "education", "skills", "certifications", "projects", "accomplishments",
     "responsibilities", "requirements", "qualifications", "benefits", "about",
+    "professional summary", "executive summary", "career overview", "highlights", "skill highlights",
+    "core qualifications", "core competencies", "education and training", "interests", "languages",
+    "additional information", "affiliations", "certifications and licenses", "professional affiliations",
 )
 _SECTION_LINE = re.compile(rf"^\s*({'|'.join(SECTION_NAMES)})\s*:?\s*$", re.IGNORECASE)
 _MARKDOWN_HEADING = re.compile(r"^\s*#{1,6}\s+(.+?)\s*$")
