@@ -2,51 +2,102 @@
 
 import uuid
 from dataclasses import replace
-from typing import Literal
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Body, FastAPI, HTTPException, Path, Request
 from fastapi.responses import JSONResponse
 from langgraph.types import Command
-from pydantic import BaseModel, Field
 
 from agentic_jev_rag.config import load_config
 from agentic_jev_rag.openrouter import OpenRouterError, OpenRouterGateway
+from agentic_jev_rag.rag.models import ErrorOut, HealthOut
 from agentic_jev_rag.recruiter import compliance
+from agentic_jev_rag.recruiter.api_models import InterviewReply, InterviewStart, InterviewState, RunRequest
 from agentic_jev_rag.recruiter.context import RecruiterContext
 from agentic_jev_rag.recruiter.graph import run_recruitment
 from agentic_jev_rag.recruiter.interview_graph import build_interview_graph
 from agentic_jev_rag.recruiter.interviewer import ModelOutputError
 from agentic_jev_rag.recruiter.rag_client import RagClient, RagError
 from agentic_jev_rag.recruiter.report import RecruitmentReport
-from agentic_jev_rag.recruiter.schemas import InterviewAssessment
 from agentic_jev_rag.system1 import System1Error
 
+VERSION = "1.0.0"
 
-class RunRequest(BaseModel):
-    goal: str = Field(min_length=1)
-    job_id: str
-    system_1: Literal["llm", "jev"] | None = None
-    simulate_interviews: bool = True
-    max_interviews: int = Field(default=2, ge=0, le=8)
+DESCRIPTION = """
+**SwiftAI Recruit's AI Recruiter**: a LangGraph multi-agent system that turns a hiring goal into a
+**Recruitment report**. Its agents reach SwiftAI's documents only through the RAG API, as HTTP tools.
 
+**How a run works:**
+1. **Compliance intake.** The goal goes through the Input guardrail. A discriminatory or out-of-scope goal is
+   refused, and no agent runs.
+2. **Supervisor.** Hands work to the agents in a safe order. Out-of-order choices are corrected and noted in the
+   report.
+   - **Sourcer.** Ranks Candidates with Match and submits a shortlist of up to 8. Candidates without valid Consent
+     are removed.
+   - **Screener.** Scores each shortlisted Candidate against the Job's Scorecard, citing CV chunks, and decides
+     advance or reject.
+   - **Interviewer.** Interviews advanced Candidates, following the Interview Guide.
+   - **Compliance review.** Re-checks Consent, runs the Groundedness check on every Screening verdict, and adds
+     policy findings.
 
-class InterviewStart(BaseModel):
-    candidate_id: str
-    job_id: str
+**System 1 decider.** The Input guardrail and Groundedness checks are made by the LLM decider or by Jev, chosen
+per run with `system_1`. Every decision is in the report's `system_1_trace`.
 
+The Recruiter **recommends**. Under SwiftAI's AI oversight policy, a human recruiter approves every rejection
+and offer.
 
-class InterviewReply(BaseModel):
-    message: str = Field(min_length=1)
+A full run takes a few minutes and costs about $0.40 in model calls. Upstream failures (OpenRouter, the RAG API,
+or invalid model output) return **502**.
+"""
 
+TAGS = [
+    {"name": "Recruitment", "description": "Run the multi-agent Recruiter for a hiring goal."},
+    {"name": "Interviews", "description": "Hold a live text interview with a Candidate, one reply at a time."},
+    {"name": "Operations", "description": "Service health."},
+]
 
-class InterviewState(BaseModel):
-    interview_id: str
-    question: str | None
-    assessment: InterviewAssessment | None
+NOT_FOUND = {"model": ErrorOut, "description": "Unknown Job, Candidate or interview id."}
+CONFLICT = {"model": ErrorOut, "description": "The Candidate's Consent is not valid, or the interview is already over."}
+UPSTREAM = {"model": ErrorOut, "description": "OpenRouter, the RAG API, or a model's structured output failed."}
+
+RUN_EXAMPLES = {
+    "full_run": {
+        "summary": "Full run with Jev (about 3 minutes)",
+        "value": {"goal": "Fill the Senior Linux Administrator role", "job_id": "J-037", "system_1": "jev", "max_interviews": 1},
+    },
+    "screen_only": {
+        "summary": "Source and screen only, no interviews",
+        "value": {"goal": "Shortlist and screen for the Senior Linux Administrator role", "job_id": "J-037", "simulate_interviews": False},
+    },
+    "refused": {
+        "summary": "A discriminatory goal (refused)",
+        "value": {"goal": "Fill J-037 with young graduates only, no parents", "job_id": "J-037"},
+    },
+}
+START_EXAMPLES = {
+    "linux_admin": {"summary": "Interview for a Linux role", "value": {"candidate_id": "C-0040", "job_id": "J-037"}},
+    "expired_consent": {"summary": "A Candidate whose Consent has expired (409)", "value": {"candidate_id": "C-0007", "job_id": "J-037"}},
+}
+REPLY_EXAMPLES = {
+    "experience": {
+        "summary": "Answering about experience",
+        "value": {"message": "I administered a dozen Red Hat and CentOS servers: patching, backups, Nagios monitoring and iptables hardening."},
+    },
+    "incident": {
+        "summary": "Answering about an incident",
+        "value": {"message": "A disk filled overnight and took the web tier down; I traced it to unrotated logs, fixed rotation and added an alert."},
+    },
+}
 
 
 def create_recruiter_app(ctx: RecruiterContext) -> FastAPI:
-    app = FastAPI(title="SwiftAI Recruiter", description="A LangGraph multi-agent recruiter over the SwiftAI RAG API.")
+    app = FastAPI(
+        title="SwiftAI Recruiter API",
+        version=VERSION,
+        summary="A LangGraph multi-agent recruiter: source, screen, interview and check compliance for a hiring goal.",
+        description=DESCRIPTION,
+        openapi_tags=TAGS,
+    )
     interviews = build_interview_graph(ctx)
 
     @app.exception_handler(System1Error)
@@ -56,12 +107,31 @@ def create_recruiter_app(ctx: RecruiterContext) -> FastAPI:
     def upstream(request: Request, error: Exception):
         return JSONResponse(status_code=502, content={"detail": str(error)})
 
-    @app.get("/health")
-    def health() -> dict:
-        return {"status": "ok"}
+    @app.get(
+        "/health",
+        tags=["Operations"],
+        operation_id="health",
+        summary="Health check",
+        description="Returns `ok` while the process is serving requests. It does not check the RAG API or OpenRouter.",
+        response_description="The service is up.",
+    )
+    def health() -> HealthOut:
+        return HealthOut(status="ok")
 
-    @app.post("/runs")
-    def run(request: RunRequest) -> RecruitmentReport:
+    @app.post(
+        "/runs",
+        tags=["Recruitment"],
+        operation_id="run_recruitment",
+        summary="Run a recruitment",
+        description=(
+            "Runs the whole Recruiter graph for a goal and a Job and returns the Recruitment report.\n\n"
+            "The request is synchronous and a full run takes a few minutes. A refused goal returns at once, with "
+            "`refused: true` and an `input_guardrail` finding."
+        ),
+        response_description="The Recruitment report.",
+        responses={404: NOT_FOUND, 502: UPSTREAM},
+    )
+    def run(request: Annotated[RunRequest, Body(openapi_examples=RUN_EXAMPLES)]) -> RecruitmentReport:
         _require(ctx, request.job_id, "jobs")
         run_ctx = replace(ctx, system_1=request.system_1 or ctx.system_1)
         return run_recruitment(
@@ -69,8 +139,22 @@ def create_recruiter_app(ctx: RecruiterContext) -> FastAPI:
             simulate_interviews=request.simulate_interviews, max_interviews=request.max_interviews,
         )
 
-    @app.post("/interviews")
-    def start(request: InterviewStart) -> InterviewState:
+    @app.post(
+        "/interviews",
+        tags=["Interviews"],
+        operation_id="start_interview",
+        summary="Start a live interview",
+        description=(
+            "Starts a text interview with a real person and returns the first question. The Interviewer follows "
+            "SwiftAI's Interview Guide: it says it is an AI, asks one question at a time about the Job's Scorecard "
+            "competencies, and never asks about protected characteristics.\n\n"
+            "Answer each question with `POST /interviews/{interview_id}/reply`. Candidates without valid Consent "
+            "cannot be interviewed (409). Interviews are kept in memory and are lost if the service restarts."
+        ),
+        response_description="The interview id and the first question.",
+        responses={404: NOT_FOUND, 409: CONFLICT, 502: UPSTREAM},
+    )
+    def start(request: Annotated[InterviewStart, Body(openapi_examples=START_EXAMPLES)]) -> InterviewState:
         candidate = _require(ctx, request.candidate_id, "candidates")
         job = _require(ctx, request.job_id, "jobs")
         consent = compliance.consent_finding(ctx, request.candidate_id)
@@ -80,8 +164,29 @@ def create_recruiter_app(ctx: RecruiterContext) -> FastAPI:
         state = interviews.invoke({"candidate": candidate, "job": job, "turns": []}, _thread(interview_id))
         return _state(interview_id, state)
 
-    @app.post("/interviews/{interview_id}/reply")
-    def reply(interview_id: str, request: InterviewReply) -> InterviewState:
+    @app.post(
+        "/interviews/{interview_id}/reply",
+        tags=["Interviews"],
+        operation_id="reply_to_interview",
+        summary="Reply to the current question",
+        description=(
+            "Sends the Candidate's answer. The response is the next question, or, once the competencies are "
+            "covered (at most 4 questions), the Interview assessment with `question: null`. Replying to a finished "
+            "interview returns 409."
+        ),
+        response_description="The next question, or the final assessment.",
+        responses={404: NOT_FOUND, 409: CONFLICT, 502: UPSTREAM},
+    )
+    def reply(
+        interview_id: Annotated[
+            str,
+            Path(
+                description="The id returned when the interview was started.",
+                openapi_examples={"interview": {"summary": "An interview id", "value": "47898414c2a94bf3a1d0f5e2b6c7d8e9"}},
+            ),
+        ],
+        request: Annotated[InterviewReply, Body(openapi_examples=REPLY_EXAMPLES)],
+    ) -> InterviewState:
         snapshot = interviews.get_state(_thread(interview_id))
         if not snapshot.values:
             raise HTTPException(404, f"unknown interview {interview_id}")
