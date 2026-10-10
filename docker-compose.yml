@@ -15,7 +15,9 @@ services:
 
   # One-shot: index the committed corpus. Run with `docker compose --profile setup run --rm ingest`.
   ingest:
-    build: .
+    build:
+      context: .
+      target: api
     profiles: ["setup"]
     command: ["python", "-m", "agentic_jev_rag.rag.ingest"]
     environment:
@@ -25,7 +27,9 @@ services:
       - qdrant
 
   rag-api:
-    build: .
+    build:
+      context: .
+      target: api
     command: ["uvicorn", "agentic_jev_rag.rag.api:create_default_rag_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
     environment:
       OPEN_ROUTER_API_TOKEN: ${OPEN_ROUTER_API_TOKEN:-}
@@ -37,7 +41,9 @@ services:
       - qdrant
 
   recruiter-api:
-    build: .
+    build:
+      context: .
+      target: api
     command: ["uvicorn", "agentic_jev_rag.recruiter.api:create_default_recruiter_app", "--factory", "--host", "0.0.0.0", "--port", "8001"]
     environment:
       OPEN_ROUTER_API_TOKEN: ${OPEN_ROUTER_API_TOKEN:-}
