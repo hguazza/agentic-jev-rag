@@ -21,9 +21,12 @@ class InterviewRefused(Exception):
 
 
 class RecruiterClient:
-    def __init__(self, base_url: str, *, http: httpx.AsyncClient | None = None, timeout_s: float = 60.0):
+    def __init__(
+        self, base_url: str, *, api_key: str = "", http: httpx.AsyncClient | None = None, timeout_s: float = 60.0
+    ):
         """`http` lets tests pass an in-process client (httpx.ASGITransport over the Recruiter app)."""
         self._http = http or httpx.AsyncClient(base_url=base_url, timeout=timeout_s)
+        self._headers = {"X-API-Key": api_key} if api_key else {}
 
     async def start(self, candidate_id: str, job_id: str) -> dict:
         response = await self._send("/interviews", {"candidate_id": candidate_id, "job_id": job_id})
@@ -40,7 +43,7 @@ class RecruiterClient:
 
     async def _send(self, path: str, body: dict) -> httpx.Response:
         try:
-            return await self._http.post(path, json=body)
+            return await self._http.post(path, json=body, headers=self._headers)
         except httpx.ConnectError as error:  # never reached the API: safe to resend
             raise RecruiterError(f"Recruiter API unreachable: {error}", retryable=True) from error
         except httpx.TransportError as error:  # e.g. a timeout: the API may still be processing the answer

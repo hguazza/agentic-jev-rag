@@ -186,3 +186,23 @@ def test_each_submitted_answer_is_logged_for_a_human_to_check(voice, caplog):
     [record] = [r for r in caplog.records if r.name == "agentic_jev_rag.voice.interview"]
     assert interview.interview_id in record.getMessage()
     assert "question" in record.getMessage() and "I partitioned Kafka topics." in record.getMessage()
+
+
+def test_the_voice_client_sends_the_api_key(recruiter_context):
+    from dataclasses import replace
+
+    from agentic_jev_rag.voice.recruiter_client import RecruiterError
+
+    ctx = recruiter_context(interview_gateway())
+    ctx.config = replace(ctx.config, api_key="s3cret")
+    app = create_recruiter_app(ctx)
+
+    def client(key):
+        http = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://recruiter")
+        return RecruiterClient("http://recruiter", api_key=key, http=http)
+
+    started = asyncio.run(client("s3cret").start("C-001", "J-001"))
+    assert started["question"]
+    with pytest.raises(RecruiterError) as refused:
+        asyncio.run(client("").start("C-001", "J-001"))
+    assert "401" in str(refused.value) and refused.value.retryable is False

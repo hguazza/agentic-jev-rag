@@ -73,3 +73,11 @@ def test_agent_tool_schemas_keep_field_descriptions_for_the_model():
 
     assert schema["properties"]["decision"]["description"]
     assert schema["properties"]["scores"]["items"]["properties"]["evidence_chunk_ids"]["description"]
+
+
+def test_the_api_key_is_a_documented_security_scheme(openapi):
+    [scheme] = openapi["components"]["securitySchemes"].values()
+    assert scheme == {**scheme, "type": "apiKey", "in": "header", "name": "X-API-Key"}
+    assert scheme.get("description")
+    ops = operations(openapi)
+    assert ops["start_interview"].get("security") and "security" not in ops["health"]

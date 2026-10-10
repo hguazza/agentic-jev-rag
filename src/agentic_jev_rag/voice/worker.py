@@ -60,7 +60,7 @@ async def interview(ctx: JobContext) -> None:
     async def on_retry() -> None:
         session.say(SORRY)
 
-    client = RecruiterClient(config.voice.recruiter_url)
+    client = RecruiterClient(config.voice.recruiter_url, api_key=config.api_key)
     voice = VoiceInterview(client, candidate_id, job_id, RESULTS_DIR, on_retry=on_retry)
 
     async def cleanup() -> None:

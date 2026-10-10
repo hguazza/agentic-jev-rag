@@ -308,3 +308,31 @@ def test_a_run_left_running_too_long_is_reported_as_interrupted(recruiter_contex
 
 def test_an_unknown_run_is_404(client):
     assert client(recruiter_gateway()).get("/runs/nope").status_code == 404
+
+
+@pytest.fixture
+def keyed(recruiter_context):
+    from dataclasses import replace
+
+    ctx = recruiter_context(recruiter_gateway())
+    ctx.config = replace(ctx.config, api_key="s3cret")
+    return TestClient(create_recruiter_app(ctx))
+
+
+def test_with_an_api_key_set_every_route_but_health_and_docs_needs_it(keyed):
+    start = {"candidate_id": "C-001", "job_id": "J-001"}
+
+    assert keyed.post("/interviews", json=start).status_code == 401
+    assert keyed.post("/interviews", json=start, headers={"X-API-Key": "wrong"}).status_code == 401
+    assert keyed.post("/runs", json={"goal": "Fill it", "job_id": "J-001"}).status_code == 401
+    assert keyed.get("/runs/any").status_code == 401
+    assert keyed.post("/interviews/any/reply", json={"message": "hi"}).status_code == 401
+    assert keyed.get("/health").status_code == 200
+    assert keyed.get("/docs").status_code == 200 and keyed.get("/openapi.json").status_code == 200
+
+    started = keyed.post("/interviews", json=start, headers={"X-API-Key": "s3cret"})
+    assert started.status_code == 200 and started.json()["question"]
+
+
+def test_without_an_api_key_set_auth_is_off(client):
+    assert client(recruiter_gateway()).post("/interviews", json={"candidate_id": "C-001", "job_id": "J-001"}).status_code == 200

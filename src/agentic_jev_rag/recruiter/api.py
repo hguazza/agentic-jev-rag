@@ -1,12 +1,14 @@
 """The Recruiter API: run a recruitment for a goal, or hold a live interview."""
 
+import secrets
 import time
 import uuid
 from dataclasses import replace
 from typing import Annotated
 
-from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Path, Request
+from fastapi import BackgroundTasks, Body, Depends, FastAPI, HTTPException, Path, Request, Security
 from fastapi.responses import JSONResponse
+from fastapi.security import APIKeyHeader
 from langgraph.types import Command
 
 from agentic_jev_rag.config import load_config
@@ -61,6 +63,12 @@ TAGS = [
 
 NOT_FOUND = {"model": ErrorOut, "description": "Unknown Job, Candidate, run or interview id."}
 ACCEPTED = {"description": "The run started; poll `GET /runs/{run_id}`."}
+UNAUTHORISED = {"model": ErrorOut, "description": "Missing or wrong `X-API-Key`."}
+API_KEY = APIKeyHeader(
+    name="X-API-Key",
+    auto_error=False,
+    description="The service's API key. Required on every route but /health when the service has one configured.",
+)
 CONFLICT = {"model": ErrorOut, "description": "The Candidate's Consent is not valid, or the interview is already over."}
 UPSTREAM = {"model": ErrorOut, "description": "OpenRouter, the RAG API, or a model's structured output failed."}
 
@@ -112,6 +120,13 @@ def create_recruiter_app(ctx: RecruiterContext, *, runs: RunStore | None = None)
     interviews = build_interview_graph(ctx, checkpointer=make_checkpointer(ctx.config))
     runs = runs or make_run_store(ctx.config)
 
+    def authorised(key: Annotated[str | None, Security(API_KEY)] = None) -> None:
+        expected = ctx.config.api_key
+        if expected and not (key and secrets.compare_digest(key, expected)):
+            raise HTTPException(401, "missing or wrong X-API-Key")
+
+    protected = [Depends(authorised)]
+
     @app.exception_handler(System1Error)
     @app.exception_handler(OpenRouterError)
     @app.exception_handler(RagError)
@@ -142,7 +157,8 @@ def create_recruiter_app(ctx: RecruiterContext, *, runs: RunStore | None = None)
             "completes at once, with `refused: true` and an `input_guardrail` finding."
         ),
         response_description="The run id, with status `running`.",
-        responses={202: ACCEPTED, 404: NOT_FOUND},
+        responses={202: ACCEPTED, 401: UNAUTHORISED, 404: NOT_FOUND},
+        dependencies=protected,
     )
     def run(request: Annotated[RunRequest, Body(openapi_examples=RUN_EXAMPLES)], background: BackgroundTasks) -> RunStatus:
         _require(ctx, request.job_id, "jobs")
@@ -173,7 +189,8 @@ def create_recruiter_app(ctx: RecruiterContext, *, runs: RunStore | None = None)
             "error. A run still `running` 20 minutes after it started was interrupted and is reported as `failed`."
         ),
         response_description="The run's status and, once complete, its report.",
-        responses={404: NOT_FOUND},
+        responses={401: UNAUTHORISED, 404: NOT_FOUND},
+        dependencies=protected,
     )
     def run_status(
         run_id: Annotated[
@@ -202,7 +219,8 @@ def create_recruiter_app(ctx: RecruiterContext, *, runs: RunStore | None = None)
             "cannot be interviewed (409). Interviews are checkpointed (in DynamoDB when deployed), so they survive restarts."
         ),
         response_description="The interview id and the first question.",
-        responses={404: NOT_FOUND, 409: CONFLICT, 502: UPSTREAM},
+        responses={401: UNAUTHORISED, 404: NOT_FOUND, 409: CONFLICT, 502: UPSTREAM},
+        dependencies=protected,
     )
     def start(request: Annotated[InterviewStart, Body(openapi_examples=START_EXAMPLES)]) -> InterviewState:
         candidate = _require(ctx, request.candidate_id, "candidates")
@@ -227,7 +245,8 @@ def create_recruiter_app(ctx: RecruiterContext, *, runs: RunStore | None = None)
             "a finished interview returns 409."
         ),
         response_description="The next question, or the final assessment.",
-        responses={404: NOT_FOUND, 409: CONFLICT, 502: UPSTREAM},
+        responses={401: UNAUTHORISED, 404: NOT_FOUND, 409: CONFLICT, 502: UPSTREAM},
+        dependencies=protected,
     )
     def reply(
         interview_id: Annotated[
