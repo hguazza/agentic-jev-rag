@@ -17,6 +17,7 @@ from agentic_jev_rag.recruiter.context import RecruiterContext
 from agentic_jev_rag.recruiter.graph import run_recruitment
 from agentic_jev_rag.recruiter.interview_graph import build_interview_graph
 from agentic_jev_rag.recruiter.interviewer import ModelOutputError
+from agentic_jev_rag.recruiter.persistence import make_checkpointer
 from agentic_jev_rag.recruiter.rag_client import RagClient, RagError
 from agentic_jev_rag.recruiter.report import RecruitmentReport
 from agentic_jev_rag.system1 import System1Error
@@ -105,7 +106,7 @@ def create_recruiter_app(ctx: RecruiterContext) -> FastAPI:
         description=DESCRIPTION,
         openapi_tags=TAGS,
     )
-    interviews = build_interview_graph(ctx)
+    interviews = build_interview_graph(ctx, checkpointer=make_checkpointer(ctx.config))
 
     @app.exception_handler(System1Error)
     @app.exception_handler(OpenRouterError)
@@ -156,7 +157,7 @@ def create_recruiter_app(ctx: RecruiterContext) -> FastAPI:
             "SwiftAI's Interview Guide: it says it is an AI, asks one question at a time about the Job's Scorecard "
             "competencies, and never asks about protected characteristics.\n\n"
             "Answer each question with `POST /interviews/{interview_id}/reply`. Candidates without valid Consent "
-            "cannot be interviewed (409). Interviews are kept in memory and are lost if the service restarts."
+            "cannot be interviewed (409). Interviews are checkpointed (in DynamoDB when deployed), so they survive restarts."
         ),
         response_description="The interview id and the first question.",
         responses={404: NOT_FOUND, 409: CONFLICT, 502: UPSTREAM},

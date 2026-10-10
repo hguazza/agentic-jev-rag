@@ -11,12 +11,18 @@ from typing import Literal, Protocol
 import boto3
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph_checkpoint_aws import DynamoDBSaver
 
 from agentic_jev_rag.config import Config
 
 RETENTION_S = 7 * 24 * 3600  # DynamoDB TTL on checkpoints and run records
 STALE_AFTER_S = 20 * 60  # a full run takes about 3 minutes; one still running after 20 lost its task
+# Types the interview graph keeps in its state. LangGraph only deserialises checkpointed classes it is told about.
+CHECKPOINT_TYPES = [
+    ("agentic_jev_rag.recruiter.schemas", name) for name in ("InterviewAssessment", "InterviewTurn", "RedFlag", "TurnTiming")
+]
+SERDE = JsonPlusSerializer(allowed_msgpack_modules=CHECKPOINT_TYPES)
 
 
 @dataclass(frozen=True)
@@ -88,13 +94,18 @@ class DynamoRuns:
 
 def make_checkpointer(config: Config) -> BaseCheckpointSaver:
     if config.persistence == "memory":
-        return InMemorySaver()
-    return DynamoDBSaver(
+        return InMemorySaver(serde=SERDE)
+    return _DynamoDBSaver(
         table_name=config.checkpoint_table,
         session=_session(config),
         endpoint_url=config.dynamodb_endpoint or None,
         ttl_seconds=RETENTION_S,
     )
+
+
+class _DynamoDBSaver(DynamoDBSaver):
+    # DynamoDBSaver takes no `serde` argument; the base class picks up this class attribute instead.
+    serde = SERDE
 
 
 def make_run_store(config: Config) -> RunStore:

@@ -1,4 +1,4 @@
-"""A live interview as a LangGraph graph that pauses for each Candidate reply (interrupt + checkpointer).
+"""A live interview as a LangGraph graph that pauses for each Candidate reply (interrupt + a checkpointer: in memory locally, DynamoDB on AWS).
 
 Every reply gets a System 1 Turn check before the System 2 model is asked anything: unusable replies are
 reprompted and prompt injections redirected without a System 2 call (at most `max_reprompts` per question).
@@ -9,6 +9,7 @@ Interview signals for each scored answer run in the same superstep as the next q
 from dataclasses import asdict
 from typing import TypedDict
 
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
@@ -42,7 +43,9 @@ class InterviewGraphState(TypedDict, total=False):
     assessment: InterviewAssessment | None
 
 
-def build_interview_graph(ctx: RecruiterContext, *, max_questions: int = 4):
+def build_interview_graph(
+    ctx: RecruiterContext, *, max_questions: int = 4, checkpointer: BaseCheckpointSaver | None = None
+):
     budgets = ctx.config.voice
 
     def brief(state: InterviewGraphState) -> dict:
@@ -139,7 +142,7 @@ def build_interview_graph(ctx: RecruiterContext, *, max_questions: int = 4):
         "route_next", lambda s: "assess" if s["question"] is None else "wait_for_answer", ["assess", "wait_for_answer"]
     )
     graph.add_edge("assess", END)
-    return graph.compile(checkpointer=InMemorySaver())
+    return graph.compile(checkpointer=checkpointer or InMemorySaver())
 
 
 def _scored(state: InterviewGraphState) -> list[InterviewTurn]:

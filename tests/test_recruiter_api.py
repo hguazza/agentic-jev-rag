@@ -248,3 +248,28 @@ def test_reply_timing_is_kept_per_turn_reported_as_advisory_and_never_shown_to_t
     assert [f["check"] for f in done["findings"]] == ["integrity"] and done["findings"][0]["passed"]
     prompt = prompts_for(gateway, "interview_assessment")[-1]
     assert "12.5" not in prompt and "response_latency" not in prompt and "filler" not in prompt.lower()
+
+
+def test_an_interview_continues_on_another_instance_when_checkpoints_are_in_dynamodb(
+    recruiter_context, dynamodb_tables, caplog
+):
+    from dataclasses import replace
+
+    gateway = recruiter_gateway()
+
+    def instance():
+        ctx = recruiter_context(gateway)
+        ctx.config = replace(ctx.config, **dynamodb_tables)
+        return TestClient(create_recruiter_app(ctx))
+
+    first, second = instance(), instance()
+
+    started = first.post("/interviews", json={"candidate_id": "C-001", "job_id": "J-001"}).json()
+    next_question = second.post(f"/interviews/{started['interview_id']}/reply", json={"message": "I partitioned Kafka topics."}).json()
+    assert next_question["question"] == "Tell me about question 2."
+    done = first.post(f"/interviews/{started['interview_id']}/reply", json={"message": "I owned on-call."}).json()
+
+    assert done["assessment"]["recommendation"] == "next_round"
+    assert [t["answer"] for t in done["assessment"]["turns"]] == ["I partitioned Kafka topics.", "I owned on-call."]
+    # LangGraph will refuse checkpointed types it was not told about; every type the interview stores is allowed
+    assert not [r for r in caplog.records if "unregistered type" in r.getMessage()]
