@@ -7,6 +7,12 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  # DynamoDB Local: interview checkpoints and run records for the tests (AWS uses DynamoDB itself).
+  dynamodb:
+    image: amazon/dynamodb-local:3.3.1
+    ports:
+      - "8002:8000"
+
   # One-shot: index the committed corpus. Run with `docker compose --profile setup run --rm ingest`.
   ingest:
     build: .

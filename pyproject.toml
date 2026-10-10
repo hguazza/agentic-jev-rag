@@ -12,6 +12,8 @@ dependencies = [
     "uvicorn[standard]>=0.50",
     "langgraph>=1.2,<1.3",
     "pydantic>=2.10",
+    "langgraph-checkpoint-aws>=1.2,<2",
+    "boto3>=1.40",
 ]
 
 [build-system]
