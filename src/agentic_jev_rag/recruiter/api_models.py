@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from agentic_jev_rag.recruiter.report import RecruitmentReport
 from agentic_jev_rag.recruiter.schemas import ComplianceFinding, InterviewAssessment, TurnTiming
 
 
@@ -62,4 +63,19 @@ class InterviewState(BaseModel):
     assessment: InterviewAssessment | None = Field(description="The Interviewer's assessment; set once the interview is over.")
     findings: list[ComplianceFinding] = Field(
         default_factory=list, description="Compliance findings on the assessment, once the interview is over."
+    )
+
+
+class RunStatus(BaseModel):
+    """Where a recruitment run stands. Poll `GET /runs/{run_id}` until `status` is `complete` or `failed`."""
+
+    run_id: str = Field(description="Id to poll with `GET /runs/{run_id}`.", examples=["5f0c3b7e9a8d4c2e8b1a6f4d3c2b1a09"])
+    status: Literal["running", "complete", "failed"] = Field(
+        description="`running` until the Recruiter finishes; then `complete` with the report, or `failed` with the error."
+    )
+    report: RecruitmentReport | None = Field(default=None, description="The Recruitment report, once `complete`.")
+    error: str | None = Field(
+        default=None,
+        description="Why the run failed: an upstream failure (OpenRouter, the RAG API, invalid model output) or an "
+        "interrupted run.",
     )

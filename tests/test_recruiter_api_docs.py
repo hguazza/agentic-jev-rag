@@ -32,7 +32,7 @@ def test_the_app_describes_itself_and_its_tags(openapi):
 def test_every_operation_is_summarised_described_tagged_and_named(openapi):
     ops = operations(openapi)
 
-    assert set(ops) == {"run_recruitment", "start_interview", "reply_to_interview", "health"}
+    assert set(ops) == {"run_recruitment", "run_status", "start_interview", "reply_to_interview", "health"}
     for operation_id, op in ops.items():
         assert op.get("summary") and len(op.get("description", "")) > 40 and op.get("tags"), operation_id
 
@@ -40,7 +40,8 @@ def test_every_operation_is_summarised_described_tagged_and_named(openapi):
 def test_error_responses_are_documented(openapi):
     ops = operations(openapi)
 
-    assert {"404", "502"} <= set(ops["run_recruitment"]["responses"])
+    assert {"202", "404"} <= set(ops["run_recruitment"]["responses"])
+    assert {"404"} <= set(ops["run_status"]["responses"])
     assert {"404", "409", "502"} <= set(ops["start_interview"]["responses"])
     assert {"404", "409", "502"} <= set(ops["reply_to_interview"]["responses"])
     schema = ops["reply_to_interview"]["responses"]["409"]["content"]["application/json"]["schema"]

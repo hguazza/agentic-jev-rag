@@ -66,6 +66,16 @@ def recruiter_gateway(*, shortlist=("C-001", "C-003"), verdict="allowed", ground
     )
 
 
+def run(api, body):
+    """Starts a run and reads its result; TestClient finishes background tasks before returning the response."""
+    accepted = api.post("/runs", json=body)
+    assert accepted.status_code == 202, accepted.text
+    assert accepted.json()["status"] == "running"
+    status = api.get(f"/runs/{accepted.json()['run_id']}").json()
+    assert status["status"] == "complete", status
+    return status["report"]
+
+
 @pytest.fixture
 def client(recruiter_context):
     def make(gateway, **kwargs):
@@ -77,7 +87,7 @@ def client(recruiter_context):
 def test_a_discriminatory_goal_is_refused_before_any_agent_runs(client):
     gateway = recruiter_gateway(verdict="discriminatory")
 
-    report = client(gateway).post("/runs", json={"goal": "Backend engineers, men under 35 only", "job_id": "J-001"}).json()
+    report = run(client(gateway), {"goal": "Backend engineers, men under 35 only", "job_id": "J-001"})
 
     assert report["refused"] is True
     assert report["shortlist"] is None
@@ -87,10 +97,8 @@ def test_a_discriminatory_goal_is_refused_before_any_agent_runs(client):
 
 
 def test_a_full_run_produces_a_recruitment_report(client):
-    response = client(recruiter_gateway()).post("/runs", json={"goal": "Fill the senior backend role", "job_id": "J-001"})
+    report = run(client(recruiter_gateway()), {"goal": "Fill the senior backend role", "job_id": "J-001"})
 
-    assert response.status_code == 200
-    report = response.json()
     assert report["refused"] is False
     assert [c["candidate_id"] for c in report["shortlist"]["candidates"]] == ["C-001", "C-003"]
     assert {v["candidate_id"]: v["decision"] for v in report["verdicts"]} == {"C-001": "advance", "C-003": "reject"}
@@ -107,9 +115,7 @@ def test_a_full_run_produces_a_recruitment_report(client):
 
 
 def test_candidates_without_valid_consent_never_reach_the_shortlist(client):
-    report = client(recruiter_gateway(shortlist=("C-004", "C-001"))).post(
-        "/runs", json={"goal": "Fill the senior backend role", "job_id": "J-001"}
-    ).json()
+    report = run(client(recruiter_gateway(shortlist=("C-004", "C-001"))), {"goal": "Fill the senior backend role", "job_id": "J-001"})
 
     assert [c["candidate_id"] for c in report["shortlist"]["candidates"]] == ["C-001"]
     assert {"check": "consent", "subject": "C-004", "passed": False} == {
@@ -119,17 +125,16 @@ def test_candidates_without_valid_consent_never_reach_the_shortlist(client):
 
 
 def test_ungrounded_verdicts_are_flagged_in_the_report(client):
-    report = client(recruiter_gateway(grounded=False)).post(
-        "/runs", json={"goal": "Fill the senior backend role", "job_id": "J-001"}
-    ).json()
+    report = run(client(recruiter_gateway(grounded=False)), {"goal": "Fill the senior backend role", "job_id": "J-001"})
 
     assert any(f["check"] == "groundedness" and not f["passed"] for f in report["findings"])
 
 
 def test_runs_can_switch_to_the_jev_decider(client):
-    report = client(recruiter_gateway()).post(
-        "/runs", json={"goal": "Fill the senior backend role", "job_id": "J-001", "system_1": "jev", "simulate_interviews": False}
-    ).json()
+    report = run(
+        client(recruiter_gateway()),
+        {"goal": "Fill the senior backend role", "job_id": "J-001", "system_1": "jev", "simulate_interviews": False},
+    )
 
     assert {t["implementation"] for t in report["system_1_trace"]} == {"jev"}
     assert report["assessments"] == []
@@ -164,9 +169,7 @@ def test_interviews_need_a_known_id_and_a_candidate_with_valid_consent(client):
 
 
 def test_a_duplicated_candidate_in_the_shortlist_still_gets_a_compliance_review(client):
-    report = client(recruiter_gateway(shortlist=("C-001", "C-001", "C-003"))).post(
-        "/runs", json={"goal": "Fill the senior backend role", "job_id": "J-001"}
-    ).json()
+    report = run(client(recruiter_gateway(shortlist=("C-001", "C-001", "C-003"))), {"goal": "Fill the senior backend role", "job_id": "J-001"})
 
     assert [c["candidate_id"] for c in report["shortlist"]["candidates"]] == ["C-001", "C-003"]
     assert {f["check"] for f in report["findings"]} >= {"consent", "groundedness"}
@@ -273,3 +276,35 @@ def test_an_interview_continues_on_another_instance_when_checkpoints_are_in_dyna
     assert [t["answer"] for t in done["assessment"]["turns"]] == ["I partitioned Kafka topics.", "I owned on-call."]
     # LangGraph will refuse checkpointed types it was not told about; every type the interview stores is allowed
     assert not [r for r in caplog.records if "unregistered type" in r.getMessage()]
+
+
+def test_a_run_whose_models_fail_is_reported_as_failed(client):
+    from agentic_jev_rag.openrouter import OpenRouterError
+
+    def down(model, messages, tools):
+        raise OpenRouterError("OpenRouter is down")
+
+    gateway = scripted_gateway(verdict="allowed", chat_responder=by_agent(Supervisor=down))
+    api = client(gateway)
+
+    run_id = api.post("/runs", json={"goal": "Fill the senior backend role", "job_id": "J-001"}).json()["run_id"]
+    status = api.get(f"/runs/{run_id}").json()
+
+    assert status["status"] == "failed"
+    assert "OpenRouter is down" in status["error"] and status["report"] is None
+
+
+def test_a_run_left_running_too_long_is_reported_as_interrupted(recruiter_context):
+    from agentic_jev_rag.recruiter.persistence import MemoryRuns, RunRecord
+
+    runs = MemoryRuns()
+    runs.put(RunRecord(run_id="old", status="running", started_at=0.0))
+    api = TestClient(create_recruiter_app(recruiter_context(recruiter_gateway()), runs=runs))
+
+    status = api.get("/runs/old").json()
+
+    assert status["status"] == "failed" and "interrupted" in status["error"]
+
+
+def test_an_unknown_run_is_404(client):
+    assert client(recruiter_gateway()).get("/runs/nope").status_code == 404

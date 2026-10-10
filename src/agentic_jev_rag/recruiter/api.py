@@ -1,10 +1,11 @@
 """The Recruiter API: run a recruitment for a goal, or hold a live interview."""
 
+import time
 import uuid
 from dataclasses import replace
 from typing import Annotated
 
-from fastapi import Body, FastAPI, HTTPException, Path, Request
+from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Path, Request
 from fastapi.responses import JSONResponse
 from langgraph.types import Command
 
@@ -12,14 +13,13 @@ from agentic_jev_rag.config import load_config
 from agentic_jev_rag.openrouter import OpenRouterError, OpenRouterGateway
 from agentic_jev_rag.rag.models import ErrorOut, HealthOut
 from agentic_jev_rag.recruiter import compliance
-from agentic_jev_rag.recruiter.api_models import InterviewReply, InterviewStart, InterviewState, RunRequest
+from agentic_jev_rag.recruiter.api_models import InterviewReply, InterviewStart, InterviewState, RunRequest, RunStatus
 from agentic_jev_rag.recruiter.context import RecruiterContext
 from agentic_jev_rag.recruiter.graph import run_recruitment
 from agentic_jev_rag.recruiter.interview_graph import build_interview_graph
 from agentic_jev_rag.recruiter.interviewer import ModelOutputError
-from agentic_jev_rag.recruiter.persistence import make_checkpointer
+from agentic_jev_rag.recruiter.persistence import RunRecord, RunStore, make_checkpointer, make_run_store
 from agentic_jev_rag.recruiter.rag_client import RagClient, RagError
-from agentic_jev_rag.recruiter.report import RecruitmentReport
 from agentic_jev_rag.system1 import System1Error
 
 VERSION = "1.0.0"
@@ -47,8 +47,10 @@ per run with `system_1`. Every decision is in the report's `system_1_trace`.
 The Recruiter **recommends**. Under SwiftAI's AI oversight policy, a human recruiter approves every rejection
 and offer.
 
-A full run takes a few minutes and costs about $0.40 in model calls. Upstream failures (OpenRouter, the RAG API,
-or invalid model output) return **502**.
+A full run takes a few minutes and costs about $0.40 in model calls, so runs are asynchronous: `POST /runs`
+returns `202` with a `run_id`, and `GET /runs/{run_id}` reports `running`, `complete` (with the report) or
+`failed`. Upstream failures (OpenRouter, the RAG API, or invalid model output) fail the run, or return **502**
+from the interview endpoints.
 """
 
 TAGS = [
@@ -57,7 +59,8 @@ TAGS = [
     {"name": "Operations", "description": "Service health."},
 ]
 
-NOT_FOUND = {"model": ErrorOut, "description": "Unknown Job, Candidate or interview id."}
+NOT_FOUND = {"model": ErrorOut, "description": "Unknown Job, Candidate, run or interview id."}
+ACCEPTED = {"description": "The run started; poll `GET /runs/{run_id}`."}
 CONFLICT = {"model": ErrorOut, "description": "The Candidate's Consent is not valid, or the interview is already over."}
 UPSTREAM = {"model": ErrorOut, "description": "OpenRouter, the RAG API, or a model's structured output failed."}
 
@@ -98,7 +101,7 @@ REPLY_EXAMPLES = {
 }
 
 
-def create_recruiter_app(ctx: RecruiterContext) -> FastAPI:
+def create_recruiter_app(ctx: RecruiterContext, *, runs: RunStore | None = None) -> FastAPI:
     app = FastAPI(
         title="SwiftAI Recruiter API",
         version=VERSION,
@@ -107,6 +110,7 @@ def create_recruiter_app(ctx: RecruiterContext) -> FastAPI:
         openapi_tags=TAGS,
     )
     interviews = build_interview_graph(ctx, checkpointer=make_checkpointer(ctx.config))
+    runs = runs or make_run_store(ctx.config)
 
     @app.exception_handler(System1Error)
     @app.exception_handler(OpenRouterError)
@@ -128,24 +132,62 @@ def create_recruiter_app(ctx: RecruiterContext) -> FastAPI:
 
     @app.post(
         "/runs",
+        status_code=202,
         tags=["Recruitment"],
         operation_id="run_recruitment",
-        summary="Run a recruitment",
+        summary="Start a recruitment run",
         description=(
-            "Runs the whole Recruiter graph for a goal and a Job and returns the Recruitment report.\n\n"
-            "The request is synchronous and a full run takes a few minutes. A refused goal returns at once, with "
-            "`refused: true` and an `input_guardrail` finding."
+            "Starts the whole Recruiter graph for a goal and a Job and returns at once with a `run_id`. Poll "
+            "`GET /runs/{run_id}` for the Recruitment report; a full run takes a few minutes. A refused goal "
+            "completes at once, with `refused: true` and an `input_guardrail` finding."
         ),
-        response_description="The Recruitment report.",
-        responses={404: NOT_FOUND, 502: UPSTREAM},
+        response_description="The run id, with status `running`.",
+        responses={202: ACCEPTED, 404: NOT_FOUND},
     )
-    def run(request: Annotated[RunRequest, Body(openapi_examples=RUN_EXAMPLES)]) -> RecruitmentReport:
+    def run(request: Annotated[RunRequest, Body(openapi_examples=RUN_EXAMPLES)], background: BackgroundTasks) -> RunStatus:
         _require(ctx, request.job_id, "jobs")
+        record = RunRecord(run_id=uuid.uuid4().hex, status="running", started_at=time.time())
+        runs.put(record)
+        background.add_task(execute, record, request)
+        return _run_status(record)
+
+    def execute(record: RunRecord, request: RunRequest) -> None:
         run_ctx = replace(ctx, system_1=request.system_1 or ctx.system_1)
-        return run_recruitment(
-            run_ctx, request.goal, request.job_id,
-            simulate_interviews=request.simulate_interviews, max_interviews=request.max_interviews,
-        )
+        try:
+            report = run_recruitment(
+                run_ctx, request.goal, request.job_id,
+                simulate_interviews=request.simulate_interviews, max_interviews=request.max_interviews,
+            )
+        except Exception as error:  # a background run has no response to fail; GET /runs/{run_id} reports it
+            runs.put(replace(record, status="failed", error=f"{type(error).__name__}: {error}"))
+        else:
+            runs.put(replace(record, status="complete", report=report.model_dump(mode="json")))
+
+    @app.get(
+        "/runs/{run_id}",
+        tags=["Recruitment"],
+        operation_id="run_status",
+        summary="Get a recruitment run",
+        description=(
+            "Returns the run's status: `running`, `complete` with the Recruitment report, or `failed` with the "
+            "error. A run still `running` 20 minutes after it started was interrupted and is reported as `failed`."
+        ),
+        response_description="The run's status and, once complete, its report.",
+        responses={404: NOT_FOUND},
+    )
+    def run_status(
+        run_id: Annotated[
+            str,
+            Path(
+                description="The id returned when the run was started.",
+                openapi_examples={"run": {"summary": "A run id", "value": "5f0c3b7e9a8d4c2e8b1a6f4d3c2b1a09"}},
+            ),
+        ],
+    ) -> RunStatus:
+        record = runs.get(run_id)
+        if record is None:
+            raise HTTPException(404, f"unknown run {run_id}")
+        return _run_status(record)
 
     @app.post(
         "/interviews",
@@ -232,6 +274,11 @@ def _require(ctx: RecruiterContext, document_id: str, collection: str) -> dict:
 
 def _thread(interview_id: str) -> dict:
     return {"configurable": {"thread_id": interview_id}}
+
+
+def _run_status(record: RunRecord) -> RunStatus:
+    current = record.current(time.time())
+    return RunStatus(run_id=current.run_id, status=current.status, report=current.report, error=current.error)
 
 
 def _state(interview_id: str, state: dict) -> InterviewState:

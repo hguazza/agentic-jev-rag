@@ -119,13 +119,14 @@ curl -s localhost:8000/ask -H 'Content-Type: application/json' \
 # Rank Candidates for a Job
 curl -s localhost:8000/match -H 'Content-Type: application/json' -d '{"job_id": "J-037", "top_k": 5}'
 
-# A discriminatory goal is refused before any agent runs
+# A discriminatory goal is refused before any agent runs (poll the run id it returns)
 curl -s localhost:8001/runs -H 'Content-Type: application/json' \
   -d '{"goal": "Fill J-037 with young graduates only", "job_id": "J-037"}'
 
-# A full recruitment (about 3 minutes, about $0.40)
+# A full recruitment (about 3 minutes, about $0.40): start it, then poll until status is complete
 curl -s localhost:8001/runs -H 'Content-Type: application/json' \
   -d '{"goal": "Fill the Senior Linux Administrator role", "job_id": "J-037", "system_1": "jev", "max_interviews": 1}'
+curl -s localhost:8001/runs/<run_id>
 
 # A live interview: start it, then reply to each question
 curl -s localhost:8001/interviews -H 'Content-Type: application/json' -d '{"candidate_id": "C-0040", "job_id": "J-037"}'
