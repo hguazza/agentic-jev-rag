@@ -14,7 +14,8 @@ from agentic_jev_rag.rag.index import index_corpus
 def main() -> None:
     config = load_config()
     documents = load_corpus(config.corpus_dir)
-    counts = index_corpus(documents, config, OpenRouterGateway.from_env(), QdrantClient(url=config.qdrant_url))
+    qdrant = QdrantClient(url=config.qdrant_url, api_key=config.qdrant_api_key or None)
+    counts = index_corpus(documents, config, OpenRouterGateway.from_env(), qdrant)
     print(f"Indexed {len(documents)} documents into {config.qdrant_url}: {counts}")
 
 

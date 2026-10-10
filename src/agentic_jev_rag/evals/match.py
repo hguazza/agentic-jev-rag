@@ -59,7 +59,8 @@ def main() -> None:
 
     config = load_config()
     documents = load_corpus(config.corpus_dir)
-    service = RagService(config, OpenRouterGateway.from_env(), QdrantClient(url=config.qdrant_url), documents)
+    qdrant = QdrantClient(url=config.qdrant_url, api_key=config.qdrant_api_key or None)
+    service = RagService(config, OpenRouterGateway.from_env(), qdrant, documents)
     result = run_match_eval(service, relevant_candidates(documents, date.today()))
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "records.jsonl").write_text("".join(json.dumps(r) + "\n" for r in result.pop("rows")))
