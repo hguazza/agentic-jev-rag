@@ -1,0 +1,8 @@
+# Tasks need internet egress for OpenRouter, Qdrant Cloud and LiveKit (through the NAT gateway).
+AVD-AWS-0104
+# The ALB is internal and only reached by CloudFront's VPC origin; TLS terminates at CloudFront.
+AVD-AWS-0054
+# The state bucket uses SSE-S3; the state holds no secret values (secrets are set out of band), so a KMS key adds cost, not protection.
+AVD-AWS-0132
+# Alarm emails carry no secrets, and CloudWatch cannot publish to a topic encrypted with the AWS-managed SNS key.
+AVD-AWS-0095

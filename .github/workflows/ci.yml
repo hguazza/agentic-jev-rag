@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    services:
+      qdrant:
+        image: qdrant/qdrant:v1.19.1
+        ports: ["6333:6333"]
+      dynamodb:
+        image: amazon/dynamodb-local:3.3.1
+        ports: ["8002:8000"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - run: uv sync --frozen
+      - run: uv run pytest
+
+  terraform:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~1.13"
+      - run: terraform fmt -check -recursive infra
+      - name: Validate
+        run: |
+          for dir in infra/bootstrap infra/main; do
+            terraform -chdir=$dir init -backend=false -input=false
+            terraform -chdir=$dir validate
+          done
+      - uses: terraform-linters/setup-tflint@v6
+      - name: Lint
+        run: |
+          for dir in infra/bootstrap infra/main; do
+            tflint --chdir=$dir --init && tflint --chdir=$dir
+          done
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0, pinned to a commit: tags can be moved
+        with:
+          scan-type: config
+          scan-ref: infra
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          trivyignores: .trivyignore

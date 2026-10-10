@@ -1,0 +1,52 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency: deploy
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # Arm64 runners build the Graviton images natively. On a plan without arm64 runners for private
+    # repositories, use ubuntu-24.04 and add docker/setup-qemu-action@v3 before the build.
+    runs-on: ubuntu-24.04-arm
+    environment: production
+    env:
+      AWS_REGION: us-east-1
+      TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
+      TF_VAR_qdrant_url: ${{ vars.QDRANT_URL }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~1.13"
+          terraform_wrapper: false
+      - name: Build and push images
+        run: echo "TAG=$(infra/scripts/push-images.sh | tail -1)" >> "$GITHUB_ENV"
+      - name: Apply
+        run: |
+          terraform -chdir=infra/main init -input=false -backend-config=backend.hcl
+          terraform -chdir=infra/main apply -input=false -auto-approve -var image_tag="$TAG"
+      - name: Wait for the services
+        run: aws ecs wait services-stable --cluster swiftai --services rag-api recruiter-api voice-worker
+      - name: Index the corpus if it changed
+        run: |
+          if ! git diff --quiet HEAD~1 HEAD -- corpus; then infra/scripts/ingest.sh; fi
+      - name: Smoke test
+        run: curl -fsS "$(terraform -chdir=infra/main output -raw api_url)/health"
