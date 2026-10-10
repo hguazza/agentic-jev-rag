@@ -4,7 +4,7 @@ On AWS, each part of the system runs on the runtime that fits its shape. The RAG
 
 The recruitment run is the other shape: about three minutes, five agents, mostly waiting on models, started and then polled. That is what Bedrock AgentCore Runtime is for: asynchronous jobs of up to 8 hours in isolated microVMs, independent of API deploys, billed for active CPU rather than wall-clock time. In an optional second phase, the run moves there behind a `RunExecutor` seam in the Recruiter API, with a local and an AgentCore adapter; `/runs` does not change.
 
-Checkpoints move from memory to DynamoDB for both graphs, so interviews survive deploys and task loss and the Recruiter API scales past one task, and the API reads run status from the checkpoint without calling the agent. Compose remains the local runtime (ADR 0008).
+Checkpoints move from memory to DynamoDB for both graphs, so interviews survive deploys and task loss and the Recruiter API scales past one task, and run records (status, report, error) live in a DynamoDB table, so any API task answers `GET /runs/{run_id}` without calling the agent. Compose remains the local runtime (ADR 0008).
 
 ## Considered Options
 

@@ -139,8 +139,8 @@ OpenAPI docs are served at `localhost:8000/docs` and `localhost:8001/docs`.
 
 ```sh
 uv sync
-docker compose up -d qdrant
-uv run pytest            # 104 tests, offline except Qdrant; the Model gateway is the only fake
+docker compose up -d qdrant dynamodb
+uv run pytest            # about 200 tests, offline except Qdrant and DynamoDB Local; the Model gateway is the only fake
 uv run pytest -m live    # real OpenRouter calls: every Model role, Ask with both deciders, one full Recruiter run (about $1)
 ```
 
@@ -154,15 +154,39 @@ Tests sit at the public seams:
 
 ## Configuration
 
-`configs/recruiter.toml` names an OpenRouter model for every Model role, so swapping a model is a config edit. The environment can override `QDRANT_URL`, `RAG_URL`, `SYSTEM_1` and `CONFIG` (the path to the TOML file).
+`configs/recruiter.toml` names an OpenRouter model for every Model role, so swapping a model is a config edit. The environment can override `QDRANT_URL`, `QDRANT_API_KEY`, `RAG_URL`, `SYSTEM_1`, `PERSISTENCE` (`memory` or `dynamodb`), `CHECKPOINT_TABLE`, `RUNS_TABLE`, `DYNAMODB_ENDPOINT`, `RECRUITER_API_KEY` (turns on `X-API-Key` auth) and `CONFIG` (the path to the TOML file).
+
+## Deploy to AWS
+
+ECS Fargate behind CloudFront, with interview checkpoints and run records in DynamoDB, all in Terraform (`infra/`; design: `docs/superpowers/specs/2026-10-09-aws-deployment-design.md`, ADR 0014).
+
+```
+Reviewer ─HTTPS─▶ CloudFront + WAF ─VPC origin─▶ internal ALB ─▶ recruiter-api (ECS) ─▶ rag-api (ECS) ─▶ Qdrant Cloud
+LiveKit Agents Playground ⇄ LiveKit Cloud ⇄ voice-worker (ECS) ─▶ recruiter-api
+                                              recruiter-api ─▶ DynamoDB (checkpoints, runs)
+```
+
+Once, by hand (needs Terraform ≥ 1.10, an AWS profile for `us-east-1` and a Qdrant Cloud cluster):
+
+```sh
+terraform -chdir=infra/bootstrap init && terraform -chdir=infra/bootstrap apply   # state bucket + GitHub OIDC role
+printf 'bucket = "%s"\n' "$(terraform -chdir=infra/bootstrap output -raw state_bucket)" > infra/main/backend.hcl
+cp .env.aws.example .env.aws                                                       # fill the secret values
+cp infra/main/terraform.tfvars.example infra/main/terraform.tfvars                 # alert email, Qdrant Cloud URL
+terraform -chdir=infra/main init -backend-config=backend.hcl
+terraform -chdir=infra/main apply -var image_tag=bootstrap -target=aws_ecr_repository.image -target=aws_secretsmanager_secret.app
+infra/scripts/put-secrets.sh
+TAG=$(infra/scripts/push-images.sh | tail -1)
+terraform -chdir=infra/main apply -var image_tag="$TAG"
+infra/scripts/ingest.sh
+```
+
+After that, every green CI run on `main` deploys through GitHub OIDC (`.github/workflows/deploy.yml`; it needs a GitHub environment `production` with the variables `AWS_DEPLOY_ROLE_ARN`, `ALERT_EMAIL` and `QDRANT_URL`). Every route but `/health` needs `X-API-Key`; the docs are at `<api_url>/docs`. For a voice interview against AWS, open the LiveKit Agents Playground for the same LiveKit project (`docs/voice-demo.md`). Between demos, `terraform -chdir=infra/main apply -var image_tag=<current> -var running=false` scales to zero and removes the NAT gateway (about $25/month left running).
 
 ## Not in v1
 
-- AWS deployment (the images are ready for ECS).
 - Student recruitment for institutions.
 - Languages other than English.
 - A UI.
-- Authentication.
 - Integrations with an ATS, email or scheduling.
 - An MCP adapter over the RAG API.
-- Durable interview state: live interviews are kept in memory (LangGraph `InMemorySaver`) and are lost on restart.

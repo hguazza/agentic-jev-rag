@@ -85,6 +85,9 @@ An LLM playing a Candidate from their Profile, so interviews can run without a h
 **Voice worker**:
 The LiveKit process that holds a voice interview: speech to text, turn detection, the Voice host, text to speech. It reaches the interview graph only through the Recruiter API.
 
+**Agent runtime**:
+Where a Recruiter graph executes. Interviews always run in-process in the Recruiter API; on AWS the recruitment run does too (phase 1) or moves to Bedrock AgentCore Runtime (phase 2, ADR 0014).
+
 **Voice host**:
 The fast LLM that speaks for the Interviewer in a voice interview. It delivers the graph's questions and handles greetings, repeats and clarifications; it never decides what is asked or how the Candidate is assessed.
 _Avoid_: voice agent (for the host alone), bot

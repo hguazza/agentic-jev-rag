@@ -23,7 +23,7 @@ Success is reached when, from a clean clone, `docker compose up` plus one OpenRo
 - **Compliance is the fifth agent.** It is backed by the System 1 decisions, which is where LLM versus Jev runs.
 - **Corpus is public plus synthetic.** Public résumés and job postings form the backbone. Interview notes, Outcomes, Clients and Consent dates are synthetic. Policies are hand-written.
 - **The Model gateway stays the single seam to OpenRouter (ADR 0005).** Agents call models through it, LangChain chat models are not used, and per-call cost is kept. LangGraph orchestrates; it does not call models itself.
-- **AWS deployment is out of scope for v1.** The services ship as Docker images under Compose (ADR 0008), ready to move to ECS later.
+- **AWS deployment** is designed in `2026-10-09-aws-deployment-design.md` (ADR 0014).
 
 ## Architecture
 
@@ -167,7 +167,6 @@ Tests are written only at these seams:
 
 ## Out of scope for v1
 
-- AWS deployment.
 - Student recruitment.
 - Portuguese.
 - A UI.
