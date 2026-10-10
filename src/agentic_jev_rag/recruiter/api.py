@@ -122,7 +122,8 @@ def create_recruiter_app(ctx: RecruiterContext, *, runs: RunStore | None = None)
 
     def authorised(key: Annotated[str | None, Security(API_KEY)] = None) -> None:
         expected = ctx.config.api_key
-        if expected and not (key and secrets.compare_digest(key, expected)):
+        # bytes: compare_digest refuses non-ASCII str, and a header may carry any latin-1 text
+        if expected and not (key and secrets.compare_digest(key.encode(), expected.encode())):
             raise HTTPException(401, "missing or wrong X-API-Key")
 
     protected = [Depends(authorised)]

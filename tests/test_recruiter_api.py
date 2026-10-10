@@ -330,6 +330,7 @@ def test_with_an_api_key_set_every_route_but_health_and_docs_needs_it(keyed):
     assert keyed.get("/health").status_code == 200
     assert keyed.get("/docs").status_code == 200 and keyed.get("/openapi.json").status_code == 200
 
+    assert keyed.post("/interviews", json=start, headers={"X-API-Key": "café".encode("latin-1")}).status_code == 401
     started = keyed.post("/interviews", json=start, headers={"X-API-Key": "s3cret"})
     assert started.status_code == 200 and started.json()["question"]
 
