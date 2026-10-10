@@ -28,12 +28,13 @@ locals {
       env     = { QDRANT_URL = var.qdrant_url, SYSTEM_1 = var.system_1 }
       secrets = ["OPEN_ROUTER_API_TOKEN", "QDRANT_API_KEY"]
     }
+    # Keep-alive above the ALB's 120 s idle timeout, so the ALB never reuses a connection uvicorn closed (502s).
     "recruiter-api" = {
       image   = local.api_image
       cpu     = 512
       memory  = 1024
       role    = aws_iam_role.recruiter.arn
-      command = ["uvicorn", "agentic_jev_rag.recruiter.api:create_default_recruiter_app", "--factory", "--host", "0.0.0.0", "--port", "8001"]
+      command = ["uvicorn", "agentic_jev_rag.recruiter.api:create_default_recruiter_app", "--factory", "--host", "0.0.0.0", "--port", "8001", "--timeout-keep-alive", "125"]
       env = {
         AWS_REGION       = var.region
         RAG_URL          = "http://rag-api.${local.internal}:8000"
@@ -208,10 +209,8 @@ resource "aws_ecs_service" "service" {
 
   health_check_grace_period_seconds = each.key == "recruiter-api" ? 60 : null
 
-  # Autoscaling owns the count after creation; var.running moves its bounds.
-  lifecycle {
-    ignore_changes = [desired_count]
-  }
+  # Not ignored on purpose: an apply resets the count to the minimum (or to 0 with running = false), because
+  # Application Auto Scaling only applies new bounds when a scaling activity fires. Autoscaling adjusts from there.
 
   depends_on = [aws_lb_listener.http]
 }

@@ -181,7 +181,7 @@ terraform -chdir=infra/main apply -var image_tag="$TAG"
 infra/scripts/ingest.sh
 ```
 
-After that, every green CI run on `main` deploys through GitHub OIDC (`.github/workflows/deploy.yml`; it needs a GitHub environment `production` with the variables `AWS_DEPLOY_ROLE_ARN`, `ALERT_EMAIL` and `QDRANT_URL`). Every route but `/health` needs `X-API-Key`; the docs are at `<api_url>/docs`. For a voice interview against AWS, open the LiveKit Agents Playground for the same LiveKit project (`docs/voice-demo.md`). Between demos, `terraform -chdir=infra/main apply -var image_tag=<current> -var running=false` scales to zero and removes the NAT gateway (about $25/month left running).
+After that, every green CI run on `main` deploys through GitHub OIDC (`.github/workflows/deploy.yml`; it needs a GitHub environment `production` with the variables `AWS_DEPLOY_ROLE_ARN`, `ALERT_EMAIL` and `QDRANT_URL`). Every route but `/health` needs `X-API-Key`; the docs are at `<api_url>/docs`. For a voice interview against AWS, open the LiveKit Agents Playground for the same LiveKit project (`docs/voice-demo.md`). Between demos, `terraform -chdir=infra/main apply -var image_tag=<current> -var running=false` scales to zero and removes the NAT gateway (about $25/month left running). Set the `production` environment variable `RUNNING` to `false` too, or the next deploy brings it back.
 
 ## Not in v1
 

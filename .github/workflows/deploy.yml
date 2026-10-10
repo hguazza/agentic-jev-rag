@@ -15,7 +15,12 @@ permissions:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # Only a green CI run for a push to this repository's main deploys: never a pull request's run.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     # Arm64 runners build the Graviton images natively. On a plan without arm64 runners for private
     # repositories, use ubuntu-24.04 and add docker/setup-qemu-action@v3 before the build.
     runs-on: ubuntu-24.04-arm
@@ -24,6 +29,9 @@ jobs:
       AWS_REGION: us-east-1
       TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
       TF_VAR_qdrant_url: ${{ vars.QDRANT_URL }}
+      # Set the environment variable RUNNING to false to keep a scaled-down stack down across deploys.
+      TF_VAR_running: ${{ vars.RUNNING || 'true' }}
+      TF_VAR_system_1: ${{ vars.SYSTEM_1 || 'llm' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -41,7 +49,9 @@ jobs:
         run: echo "TAG=$(infra/scripts/push-images.sh | tail -1)" >> "$GITHUB_ENV"
       - name: Apply
         run: |
-          terraform -chdir=infra/main init -input=false -backend-config=backend.hcl
+          # The state bucket is named after the account (infra/bootstrap), so CI needs no backend.hcl.
+          account=$(aws sts get-caller-identity --query Account --output text)
+          terraform -chdir=infra/main init -input=false -backend-config="bucket=swiftai-tfstate-$account"
           terraform -chdir=infra/main apply -input=false -auto-approve -var image_tag="$TAG"
       - name: Wait for the services
         run: aws ecs wait services-stable --cluster swiftai --services rag-api recruiter-api voice-worker

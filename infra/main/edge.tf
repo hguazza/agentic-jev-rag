@@ -115,6 +115,17 @@ resource "aws_wafv2_web_acl" "api" {
       managed_rule_group_statement {
         vendor_name = "AWS"
         name        = "AWSManagedRulesCommonRuleSet"
+        # Interview answers are free text, and prompt-injection attempts (which the Turn check redirects) look
+        # like XSS or path traversal; long answers pass 8 KB. Count these body rules instead of blocking them.
+        dynamic "rule_action_override" {
+          for_each = ["SizeRestrictions_BODY", "CrossSiteScripting_BODY", "GenericLFI_BODY", "GenericRFI_BODY"]
+          content {
+            name = rule_action_override.value
+            action_to_use {
+              count {}
+            }
+          }
+        }
       }
     }
     visibility_config {
