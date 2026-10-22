@@ -5,8 +5,8 @@ from datetime import date
 import pytest
 from fastapi.testclient import TestClient
 
-from agentic_jev_rag.rag.api import create_rag_app
-from agentic_jev_rag.rag.service import RagService
+from agentic_recruiter.rag.api import create_rag_app
+from agentic_recruiter.rag.service import RagService
 from tests.rag_scripts import scripted_gateway
 
 TODAY = date(2026, 10, 8)

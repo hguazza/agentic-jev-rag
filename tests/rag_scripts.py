@@ -2,7 +2,7 @@
 
 import json
 
-from agentic_jev_rag.gateway import FakeModelGateway
+from agentic_recruiter.gateway import FakeModelGateway
 
 
 TURN_OUTCOMES = {

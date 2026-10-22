@@ -1,6 +1,6 @@
 # AI Systems and Human Oversight
 
-Under the EU AI Act, AI systems used to place job advertisements, filter applications or evaluate candidates are high-risk systems. SwiftAI's AI Recruiter is used this way, so the following rules apply.
+Under the EU AI Act, AI systems used to place job advertisements, filter applications or evaluate candidates are high-risk systems. The agency's AI Recruiter is used this way, so the following rules apply.
 
 ## Human oversight
 

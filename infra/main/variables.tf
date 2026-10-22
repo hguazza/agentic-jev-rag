@@ -5,7 +5,7 @@ variable "region" {
 
 variable "project" {
   type    = string
-  default = "swiftai"
+  default = "agentic-recruiter"
 }
 
 variable "image_tag" {

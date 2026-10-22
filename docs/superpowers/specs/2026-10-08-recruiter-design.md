@@ -1,10 +1,10 @@
-# SwiftAI Recruiter: design
+# Agentic Recruiter: design
 
-Date: 2026-10-08. Vocabulary: `CONTEXT.md`. Company: `docs/company-overview.md`. Target role: `docs/job-description.md`.
+Date: 2026-10-08. Vocabulary: `CONTEXT.md`. Target role: `docs/job-description.md`.
 
 ## Goal
 
-Build an autonomous AI recruiter for SwiftAI Recruit:
+Build an autonomous AI recruiter for a fictional recruiting agency:
 
 1. A **production RAG service** (FastAPI) over recruiting documents. It exposes Search, Match and Ask as endpoints that agents call as tools.
 2. A **LangGraph multi-agent Recruiter** with five agents: Supervisor, Sourcer, Screener, Interviewer and Compliance. It turns a hiring goal into a Recruitment report.
@@ -43,7 +43,7 @@ Success is reached when, from a clean clone, `docker compose up` plus one OpenRo
                                        (chat, tools, embeddings, rerank, Jev)
 ```
 
-Both services are one Python package (`agentic_jev_rag`), served by one Docker image with two commands.
+Both services are one Python package (`agentic_recruiter`), served by one Docker image with two commands.
 
 ## Components
 

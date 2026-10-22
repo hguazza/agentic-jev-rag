@@ -17,7 +17,7 @@
 - No secret in git or Terraform state: Terraform creates Secrets Manager secrets, `infra/scripts/put-secrets.sh` sets their values from git-ignored `.env.aws`.
 - Interviews stay in-process on the Recruiter API; nothing in this plan touches AgentCore.
 - The Recruiter API contract is unchanged except `/runs` (202 + `GET /runs/{run_id}`) and `X-API-Key` on every route but `/health`. With no key configured (local default), auth is off.
-- Terraform: `required_version = ">= 1.10"`, `hashicorp/aws ~> 6.68`, S3 backend with `use_lockfile = true`. Resource names prefixed `swiftai`.
+- Terraform: `required_version = ">= 1.10"`, `hashicorp/aws ~> 6.68`, S3 backend with `use_lockfile = true`. Resource names prefixed `agentic-recruiter`.
 - Commit messages in this repo are one plain sentence describing the change (see `git log`), ending with the attribution line `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 
 ## Review Focus
@@ -34,13 +34,13 @@
 
 | File | Responsibility |
 |---|---|
-| `src/agentic_jev_rag/config.py` (modify) | New settings: `qdrant_api_key`, `persistence`, `checkpoint_table`, `runs_table`, `dynamodb_endpoint`, `api_key` |
-| `src/agentic_jev_rag/recruiter/persistence.py` (create) | Durable state: `make_checkpointer`, `RunRecord`, `MemoryRuns`, `DynamoRuns`, `make_run_store` |
-| `src/agentic_jev_rag/recruiter/interview_graph.py` (modify) | `build_interview_graph(ctx, checkpointer=None)` |
-| `src/agentic_jev_rag/recruiter/api.py` (modify) | Async `/runs`, `GET /runs/{run_id}`, `X-API-Key` dependency |
-| `src/agentic_jev_rag/recruiter/api_models.py` (modify) | `RunStatus` |
-| `src/agentic_jev_rag/voice/recruiter_client.py`, `voice/worker.py` (modify) | Send `X-API-Key` |
-| `src/agentic_jev_rag/rag/api.py`, `rag/ingest.py`, `evals/match.py` (modify) | Qdrant API key |
+| `src/agentic_recruiter/config.py` (modify) | New settings: `qdrant_api_key`, `persistence`, `checkpoint_table`, `runs_table`, `dynamodb_endpoint`, `api_key` |
+| `src/agentic_recruiter/recruiter/persistence.py` (create) | Durable state: `make_checkpointer`, `RunRecord`, `MemoryRuns`, `DynamoRuns`, `make_run_store` |
+| `src/agentic_recruiter/recruiter/interview_graph.py` (modify) | `build_interview_graph(ctx, checkpointer=None)` |
+| `src/agentic_recruiter/recruiter/api.py` (modify) | Async `/runs`, `GET /runs/{run_id}`, `X-API-Key` dependency |
+| `src/agentic_recruiter/recruiter/api_models.py` (modify) | `RunStatus` |
+| `src/agentic_recruiter/voice/recruiter_client.py`, `voice/worker.py` (modify) | Send `X-API-Key` |
+| `src/agentic_recruiter/rag/api.py`, `rag/ingest.py`, `evals/match.py` (modify) | Qdrant API key |
 | `Dockerfile`, `docker-compose.yml` (modify) | `base`/`voice`/`api` targets; DynamoDB Local service |
 | `tests/conftest.py` (modify) | `dynamodb_tables` fixture |
 | `tests/test_persistence.py` (create) | Run stores and checkpointer against DynamoDB Local |
@@ -57,12 +57,12 @@
 ### Task 1: Config for Qdrant Cloud, persistence and the API key
 
 **Files:**
-- Modify: `src/agentic_jev_rag/config.py`
-- Modify: `src/agentic_jev_rag/rag/api.py:226-231`, `src/agentic_jev_rag/rag/ingest.py:17`, `src/agentic_jev_rag/evals/match.py:62`
+- Modify: `src/agentic_recruiter/config.py`
+- Modify: `src/agentic_recruiter/rag/api.py:226-231`, `src/agentic_recruiter/rag/ingest.py:17`, `src/agentic_recruiter/evals/match.py:62`
 - Test: `tests/test_config.py`
 
 **Interfaces:**
-- Produces: `Config.qdrant_api_key: str = ""`, `Config.persistence: str = "memory"` (`"memory" | "dynamodb"`), `Config.checkpoint_table: str = "swiftai-checkpoints"`, `Config.runs_table: str = "swiftai-runs"`, `Config.dynamodb_endpoint: str = ""`, `Config.api_key: str = ""`. Environment overrides: `QDRANT_API_KEY`, `PERSISTENCE`, `CHECKPOINT_TABLE`, `RUNS_TABLE`, `DYNAMODB_ENDPOINT`, `RECRUITER_API_KEY`.
+- Produces: `Config.qdrant_api_key: str = ""`, `Config.persistence: str = "memory"` (`"memory" | "dynamodb"`), `Config.checkpoint_table: str = "agentic-recruiter-checkpoints"`, `Config.runs_table: str = "agentic-recruiter-runs"`, `Config.dynamodb_endpoint: str = ""`, `Config.api_key: str = ""`. Environment overrides: `QDRANT_API_KEY`, `PERSISTENCE`, `CHECKPOINT_TABLE`, `RUNS_TABLE`, `DYNAMODB_ENDPOINT`, `RECRUITER_API_KEY`.
 
 - [ ] **Step 1: Write the failing tests** — append to `tests/test_config.py`:
 
@@ -70,8 +70,8 @@
 def test_aws_settings_can_come_from_the_environment(monkeypatch):
     monkeypatch.setenv("QDRANT_API_KEY", "qdrant-secret")
     monkeypatch.setenv("PERSISTENCE", "dynamodb")
-    monkeypatch.setenv("CHECKPOINT_TABLE", "swiftai-checkpoints")
-    monkeypatch.setenv("RUNS_TABLE", "swiftai-runs")
+    monkeypatch.setenv("CHECKPOINT_TABLE", "agentic-recruiter-checkpoints")
+    monkeypatch.setenv("RUNS_TABLE", "agentic-recruiter-runs")
     monkeypatch.setenv("DYNAMODB_ENDPOINT", "http://localhost:8002")
     monkeypatch.setenv("RECRUITER_API_KEY", "api-secret")
 
@@ -79,7 +79,7 @@ def test_aws_settings_can_come_from_the_environment(monkeypatch):
 
     assert config.qdrant_api_key == "qdrant-secret"
     assert config.persistence == "dynamodb"
-    assert (config.checkpoint_table, config.runs_table) == ("swiftai-checkpoints", "swiftai-runs")
+    assert (config.checkpoint_table, config.runs_table) == ("agentic-recruiter-checkpoints", "agentic-recruiter-runs")
     assert config.dynamodb_endpoint == "http://localhost:8002"
     assert config.api_key == "api-secret"
     assert "qdrant-secret" not in repr(config) and "api-secret" not in repr(config)
@@ -101,7 +101,7 @@ If `tests/test_config.py` does not import `pytest` yet, add `import pytest` at t
 Run: `uv run pytest tests/test_config.py -v`
 Expected: the two new tests FAIL (`AttributeError: 'Config' object has no attribute 'qdrant_api_key'`).
 
-- [ ] **Step 3: Implement** — in `src/agentic_jev_rag/config.py`:
+- [ ] **Step 3: Implement** — in `src/agentic_recruiter/config.py`:
 
 Replace the `ENVIRONMENT_OVERRIDES` line with:
 
@@ -124,8 +124,8 @@ Add these fields to `Config` after `rag_url`:
 ```python
     qdrant_api_key: str = field(default="", repr=False)  # Qdrant Cloud; empty for local Qdrant
     persistence: str = "memory"  # where interview checkpoints and run records live: memory or dynamodb
-    checkpoint_table: str = "swiftai-checkpoints"
-    runs_table: str = "swiftai-runs"
+    checkpoint_table: str = "agentic-recruiter-checkpoints"
+    runs_table: str = "agentic-recruiter-runs"
     dynamodb_endpoint: str = ""  # DynamoDB Local in tests; empty means AWS
     api_key: str = field(default="", repr=False)  # the Recruiter API's X-API-Key; empty turns auth off
 ```
@@ -142,15 +142,15 @@ Update the `load_config` docstring's override list to: "`QDRANT_URL`, `QDRANT_AP
 Then pass the key at the three Qdrant call sites (`or None`: an empty key must not send an empty `api-key` header):
 
 ```python
-# src/agentic_jev_rag/rag/api.py, create_default_rag_app
+# src/agentic_recruiter/rag/api.py, create_default_rag_app
     qdrant = QdrantClient(url=config.qdrant_url, api_key=config.qdrant_api_key or None)
     service = RagService(config, OpenRouterGateway.from_env(), qdrant, load_corpus(config.corpus_dir))
 
-# src/agentic_jev_rag/rag/ingest.py, main
+# src/agentic_recruiter/rag/ingest.py, main
     qdrant = QdrantClient(url=config.qdrant_url, api_key=config.qdrant_api_key or None)
     counts = index_corpus(documents, config, OpenRouterGateway.from_env(), qdrant)
 
-# src/agentic_jev_rag/evals/match.py
+# src/agentic_recruiter/evals/match.py
     qdrant = QdrantClient(url=config.qdrant_url, api_key=config.qdrant_api_key or None)
     service = RagService(config, OpenRouterGateway.from_env(), qdrant, documents)
 ```
@@ -163,7 +163,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agentic_jev_rag/config.py src/agentic_jev_rag/rag/api.py src/agentic_jev_rag/rag/ingest.py src/agentic_jev_rag/evals/match.py tests/test_config.py
+git add src/agentic_recruiter/config.py src/agentic_recruiter/rag/api.py src/agentic_recruiter/rag/ingest.py src/agentic_recruiter/evals/match.py tests/test_config.py
 git commit -m "Config for Qdrant Cloud's API key, DynamoDB persistence and the Recruiter API key"
 ```
 
@@ -174,7 +174,7 @@ git commit -m "Config for Qdrant Cloud's API key, DynamoDB persistence and the R
 **Files:**
 - Modify: `pyproject.toml`, `uv.lock` (via `uv add`)
 - Modify: `docker-compose.yml`, `tests/conftest.py`, `AGENTS.md`
-- Create: `src/agentic_jev_rag/recruiter/persistence.py`
+- Create: `src/agentic_recruiter/recruiter/persistence.py`
 - Test: `tests/test_persistence.py`
 
 **Interfaces:**
@@ -254,7 +254,7 @@ from dataclasses import replace
 
 import pytest
 
-from agentic_jev_rag.recruiter.persistence import (
+from agentic_recruiter.recruiter.persistence import (
     STALE_AFTER_S,
     MemoryRuns,
     RunRecord,
@@ -324,9 +324,9 @@ def test_dynamodb_persistence_uses_the_dynamodb_saver(config, dynamodb_tables):
 - [ ] **Step 4: Run them to verify they fail**
 
 Run: `uv run pytest tests/test_persistence.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'agentic_jev_rag.recruiter.persistence'`.
+Expected: FAIL with `ModuleNotFoundError: No module named 'agentic_recruiter.recruiter.persistence'`.
 
-- [ ] **Step 5: Implement** — create `src/agentic_jev_rag/recruiter/persistence.py`:
+- [ ] **Step 5: Implement** — create `src/agentic_recruiter/recruiter/persistence.py`:
 
 ```python
 """Durable state for the Recruiter API: LangGraph checkpoints and run records, in memory or in DynamoDB.
@@ -344,7 +344,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph_checkpoint_aws import DynamoDBSaver
 
-from agentic_jev_rag.config import Config
+from agentic_recruiter.config import Config
 
 RETENTION_S = 7 * 24 * 3600  # DynamoDB TTL on checkpoints and run records
 STALE_AFTER_S = 20 * 60  # a full run takes about 3 minutes; one still running after 20 lost its task
@@ -452,7 +452,7 @@ Expected: PASS. If `DynamoDBSaver` rejects `session` together with `endpoint_url
 - [ ] **Step 7: Commit**
 
 ```bash
-git add pyproject.toml uv.lock docker-compose.yml AGENTS.md tests/conftest.py tests/test_persistence.py src/agentic_jev_rag/recruiter/persistence.py
+git add pyproject.toml uv.lock docker-compose.yml AGENTS.md tests/conftest.py tests/test_persistence.py src/agentic_recruiter/recruiter/persistence.py
 git commit -m "Persistence module: LangGraph checkpoints and run records in memory or DynamoDB, tested against DynamoDB Local"
 ```
 
@@ -461,8 +461,8 @@ git commit -m "Persistence module: LangGraph checkpoints and run records in memo
 ### Task 3: Interviews checkpoint to DynamoDB
 
 **Files:**
-- Modify: `src/agentic_jev_rag/recruiter/interview_graph.py:1-20,142`
-- Modify: `src/agentic_jev_rag/recruiter/api.py` (`create_recruiter_app`, `start` description)
+- Modify: `src/agentic_recruiter/recruiter/interview_graph.py:1-20,142`
+- Modify: `src/agentic_recruiter/recruiter/api.py` (`create_recruiter_app`, `start` description)
 - Test: `tests/test_recruiter_api.py`
 
 **Interfaces:**
@@ -500,7 +500,7 @@ Expected: FAIL — the second instance answers 404 (`unknown interview`), becaus
 
 - [ ] **Step 3: Implement**
 
-In `src/agentic_jev_rag/recruiter/interview_graph.py`, add `from langgraph.checkpoint.base import BaseCheckpointSaver` next to the `InMemorySaver` import, change the builder's signature to `def build_interview_graph(ctx: RecruiterContext, checkpointer: BaseCheckpointSaver | None = None):` (keep its current return annotation, if any), and change its last line to:
+In `src/agentic_recruiter/recruiter/interview_graph.py`, add `from langgraph.checkpoint.base import BaseCheckpointSaver` next to the `InMemorySaver` import, change the builder's signature to `def build_interview_graph(ctx: RecruiterContext, checkpointer: BaseCheckpointSaver | None = None):` (keep its current return annotation, if any), and change its last line to:
 
 ```python
     return graph.compile(checkpointer=checkpointer or InMemorySaver())
@@ -508,7 +508,7 @@ In `src/agentic_jev_rag/recruiter/interview_graph.py`, add `from langgraph.check
 
 Update the module docstring's first line to end "(interrupt + a checkpointer: in memory locally, DynamoDB on AWS)."
 
-In `src/agentic_jev_rag/recruiter/api.py`, import `from agentic_jev_rag.recruiter.persistence import make_checkpointer` and replace `interviews = build_interview_graph(ctx)` with:
+In `src/agentic_recruiter/recruiter/api.py`, import `from agentic_recruiter.recruiter.persistence import make_checkpointer` and replace `interviews = build_interview_graph(ctx)` with:
 
 ```python
     interviews = build_interview_graph(ctx, make_checkpointer(ctx.config))
@@ -519,12 +519,12 @@ In the `start` endpoint's description, replace "Interviews are kept in memory an
 - [ ] **Step 4: Run the tests**
 
 Run: `uv run pytest tests/test_recruiter_api.py tests/test_interview_graph.py tests/test_voice_interview.py -v`
-Expected: PASS. If the two-instance test fails while deserialising a checkpoint (an error naming a pydantic class from `agentic_jev_rag.recruiter.schemas`), LangGraph's serializer is refusing an unregistered type: construct `DynamoDBSaver(..., serde=JsonPlusSerializer(allowed_msgpack_modules=[("agentic_jev_rag.recruiter.schemas", "<ClassName>")]))` for each class the error names, then re-run.
+Expected: PASS. If the two-instance test fails while deserialising a checkpoint (an error naming a pydantic class from `agentic_recruiter.recruiter.schemas`), LangGraph's serializer is refusing an unregistered type: construct `DynamoDBSaver(..., serde=JsonPlusSerializer(allowed_msgpack_modules=[("agentic_recruiter.recruiter.schemas", "<ClassName>")]))` for each class the error names, then re-run.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agentic_jev_rag/recruiter/interview_graph.py src/agentic_jev_rag/recruiter/api.py tests/test_recruiter_api.py
+git add src/agentic_recruiter/recruiter/interview_graph.py src/agentic_recruiter/recruiter/api.py tests/test_recruiter_api.py
 git commit -m "Interviews checkpoint through the configured persistence, so a DynamoDB-backed interview continues on any instance"
 ```
 
@@ -533,8 +533,8 @@ git commit -m "Interviews checkpoint through the configured persistence, so a Dy
 ### Task 4: Asynchronous `/runs`
 
 **Files:**
-- Modify: `src/agentic_jev_rag/recruiter/api.py` (`/runs`, new `GET /runs/{run_id}`, `DESCRIPTION`, `create_recruiter_app` signature)
-- Modify: `src/agentic_jev_rag/recruiter/api_models.py`
+- Modify: `src/agentic_recruiter/recruiter/api.py` (`/runs`, new `GET /runs/{run_id}`, `DESCRIPTION`, `create_recruiter_app` signature)
+- Modify: `src/agentic_recruiter/recruiter/api_models.py`
 - Modify: `README.md:122-128`
 - Test: `tests/test_recruiter_api.py`, `tests/test_recruiter_api_docs.py`
 
@@ -572,7 +572,7 @@ Append the new tests:
 
 ```python
 def test_a_run_whose_models_fail_is_reported_as_failed(client):
-    from agentic_jev_rag.openrouter import OpenRouterError
+    from agentic_recruiter.openrouter import OpenRouterError
 
     def down(model, messages, tools):
         raise OpenRouterError("OpenRouter is down")
@@ -588,7 +588,7 @@ def test_a_run_whose_models_fail_is_reported_as_failed(client):
 
 
 def test_a_run_left_running_too_long_is_reported_as_interrupted(recruiter_context):
-    from agentic_jev_rag.recruiter.persistence import MemoryRuns, RunRecord
+    from agentic_recruiter.recruiter.persistence import MemoryRuns, RunRecord
 
     runs = MemoryRuns()
     runs.put(RunRecord(run_id="old", status="running", started_at=0.0))
@@ -617,7 +617,7 @@ In `tests/test_recruiter_api_docs.py`:
 Run: `uv run pytest tests/test_recruiter_api.py tests/test_recruiter_api_docs.py -v`
 Expected: the rewritten run tests FAIL (`assert 200 == 202`), the new ones FAIL (404/405 on `GET /runs/...`, `TypeError` on `runs=`).
 
-- [ ] **Step 3: Implement the model** — append to `src/agentic_jev_rag/recruiter/api_models.py` (add `from agentic_jev_rag.recruiter.report import RecruitmentReport` to the imports):
+- [ ] **Step 3: Implement the model** — append to `src/agentic_recruiter/recruiter/api_models.py` (add `from agentic_recruiter.recruiter.report import RecruitmentReport` to the imports):
 
 ```python
 class RunStatus(BaseModel):
@@ -637,9 +637,9 @@ class RunStatus(BaseModel):
 
 If importing `RecruitmentReport` into `api_models.py` creates a circular import, define `RunStatus` in `api.py` instead, right above `create_recruiter_app`.
 
-- [ ] **Step 4: Implement the endpoints** — in `src/agentic_jev_rag/recruiter/api.py`:
+- [ ] **Step 4: Implement the endpoints** — in `src/agentic_recruiter/recruiter/api.py`:
 
-Imports: add `import time`, `BackgroundTasks` to the `fastapi` import, `RunStatus` to the `api_models` import, and `from agentic_jev_rag.recruiter.persistence import RunRecord, RunStore, make_checkpointer, make_run_store`.
+Imports: add `import time`, `BackgroundTasks` to the `fastapi` import, `RunStatus` to the `api_models` import, and `from agentic_recruiter.recruiter.persistence import RunRecord, RunStore, make_checkpointer, make_run_store`.
 
 In `DESCRIPTION`, replace the paragraph "A full run takes a few minutes and costs about $0.40 in model calls. Upstream failures (OpenRouter, the RAG API, or invalid model output) return **502**." with:
 
@@ -761,7 +761,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/agentic_jev_rag/recruiter/api.py src/agentic_jev_rag/recruiter/api_models.py tests/test_recruiter_api.py tests/test_recruiter_api_docs.py README.md
+git add src/agentic_recruiter/recruiter/api.py src/agentic_recruiter/recruiter/api_models.py tests/test_recruiter_api.py tests/test_recruiter_api_docs.py README.md
 git commit -m "Runs are asynchronous: POST /runs returns 202 and GET /runs/{run_id} reports running, complete or failed"
 ```
 
@@ -770,8 +770,8 @@ git commit -m "Runs are asynchronous: POST /runs returns 202 and GET /runs/{run_
 ### Task 5: API key authentication
 
 **Files:**
-- Modify: `src/agentic_jev_rag/recruiter/api.py`
-- Modify: `src/agentic_jev_rag/voice/recruiter_client.py`, `src/agentic_jev_rag/voice/worker.py:63`
+- Modify: `src/agentic_recruiter/recruiter/api.py`
+- Modify: `src/agentic_recruiter/voice/recruiter_client.py`, `src/agentic_recruiter/voice/worker.py:63`
 - Test: `tests/test_recruiter_api.py`, `tests/test_recruiter_api_docs.py`, `tests/test_voice_interview.py`
 
 **Interfaces:**
@@ -830,8 +830,8 @@ async def test_the_voice_client_sends_the_api_key(recruiter_context):
 
     import httpx
 
-    from agentic_jev_rag.recruiter.api import create_recruiter_app
-    from agentic_jev_rag.voice.recruiter_client import RecruiterClient, RecruiterError
+    from agentic_recruiter.recruiter.api import create_recruiter_app
+    from agentic_recruiter.voice.recruiter_client import RecruiterClient, RecruiterError
 
     ctx = recruiter_context(interview_gateway())
     ctx.config = replace(ctx.config, api_key="s3cret")
@@ -855,7 +855,7 @@ Mark it the same way the file's other async tests are marked (if they use `@pyte
 Run: `uv run pytest tests/test_recruiter_api.py tests/test_recruiter_api_docs.py tests/test_voice_interview.py -v`
 Expected: the new tests FAIL (200 instead of 401; no `securitySchemes`; `TypeError: unexpected keyword argument 'api_key'`).
 
-- [ ] **Step 3: Implement the API side** — in `src/agentic_jev_rag/recruiter/api.py`:
+- [ ] **Step 3: Implement the API side** — in `src/agentic_recruiter/recruiter/api.py`:
 
 Imports: add `import secrets`, `Depends` and `Security` to the `fastapi` import, and `from fastapi.security import APIKeyHeader`.
 
@@ -885,7 +885,7 @@ Add `dependencies=protected,` to the decorators of `run`, `run_status`, `start` 
 
 - [ ] **Step 4: Implement the voice side**
 
-In `src/agentic_jev_rag/voice/recruiter_client.py`:
+In `src/agentic_recruiter/voice/recruiter_client.py`:
 
 ```python
 class RecruiterClient:
@@ -897,7 +897,7 @@ class RecruiterClient:
 
 and in `_send`: `return await self._http.post(path, json=body, headers=self._headers)`.
 
-In `src/agentic_jev_rag/voice/worker.py:63`: `client = RecruiterClient(config.voice.recruiter_url, api_key=config.api_key)`.
+In `src/agentic_recruiter/voice/worker.py:63`: `client = RecruiterClient(config.voice.recruiter_url, api_key=config.api_key)`.
 
 - [ ] **Step 5: Run the whole suite**
 
@@ -907,7 +907,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/agentic_jev_rag/recruiter/api.py src/agentic_jev_rag/voice/recruiter_client.py src/agentic_jev_rag/voice/worker.py tests/test_recruiter_api.py tests/test_recruiter_api_docs.py tests/test_voice_interview.py
+git add src/agentic_recruiter/recruiter/api.py src/agentic_recruiter/voice/recruiter_client.py src/agentic_recruiter/voice/worker.py tests/test_recruiter_api.py tests/test_recruiter_api_docs.py tests/test_voice_interview.py
 git commit -m "X-API-Key on every Recruiter API route but /health when a key is configured; the voice worker sends it"
 ```
 
@@ -919,7 +919,7 @@ git commit -m "X-API-Key on every Recruiter API route but /health when a key is 
 - Modify: `Dockerfile`, `docker-compose.yml`
 
 **Interfaces:**
-- Produces: `docker build --target api` (default, unchanged behaviour) and `--target voice` (CMD `python -m agentic_jev_rag.voice start`, model files baked in).
+- Produces: `docker build --target api` (default, unchanged behaviour) and `--target voice` (CMD `python -m agentic_recruiter.voice start`, model files baked in).
 
 - [ ] **Step 1: Rewrite the Dockerfile**
 
@@ -944,12 +944,12 @@ ENV PATH="/app/.venv/bin:$PATH" CONFIG=/app/configs/recruiter.toml
 
 # The voice dependency group, with the Silero VAD and turn-detector model files downloaded at build time.
 FROM base AS voice
-RUN uv sync --frozen --no-dev --group voice && python -m agentic_jev_rag.voice download-files
-CMD ["python", "-m", "agentic_jev_rag.voice", "start"]
+RUN uv sync --frozen --no-dev --group voice && python -m agentic_recruiter.voice download-files
+CMD ["python", "-m", "agentic_recruiter.voice", "start"]
 
 FROM base AS api
 EXPOSE 8000
-CMD ["uvicorn", "agentic_jev_rag.rag.api:create_default_rag_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "agentic_recruiter.rag.api:create_default_rag_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 In `docker-compose.yml`, change each `build: .` (ingest, rag-api, recruiter-api) to:
@@ -962,12 +962,12 @@ In `docker-compose.yml`, change each `build: .` (ingest, rag-api, recruiter-api)
 
 - [ ] **Step 2: Build both targets for arm64**
 
-Run: `docker build --platform linux/arm64 --target api -t swiftai/api:local . && docker build --platform linux/arm64 --target voice -t swiftai/voice:local .`
+Run: `docker build --platform linux/arm64 --target api -t agentic-recruiter/api:local . && docker build --platform linux/arm64 --target voice -t agentic-recruiter/voice:local .`
 Expected: both succeed; the voice build logs model downloads.
 
 - [ ] **Step 3: Smoke-test the images**
 
-Run: `docker run --rm swiftai/voice:local python -c "import livekit.agents, agentic_jev_rag.voice.worker; print('ok')"`
+Run: `docker run --rm agentic-recruiter/voice:local python -c "import livekit.agents, agentic_recruiter.voice.worker; print('ok')"`
 Expected: `ok`.
 
 Run: `docker compose up -d --build rag-api recruiter-api && sleep 5 && curl -fsS localhost:8001/health && docker compose down`
@@ -989,7 +989,7 @@ git commit -m "Dockerfile builds an api image and a voice image with its model f
 - Modify: `.gitignore`
 
 **Interfaces:**
-- Produces: outputs `state_bucket` (`swiftai-tfstate-<account_id>`) and `deploy_role_arn`. GitHub environment `production` may assume the role.
+- Produces: outputs `state_bucket` (`agentic-recruiter-tfstate-<account_id>`) and `deploy_role_arn`. GitHub environment `production` may assume the role.
 
 - [ ] **Step 1: Upgrade Terraform and check AWS access**
 
@@ -1035,20 +1035,20 @@ variable "region" {
 
 variable "github_repository" {
   type    = string
-  default = "hguazza/agentic-jev-rag"
+  default = "hguazza/agentic-recruiter"
 }
 
 provider "aws" {
   region = var.region
   default_tags {
-    tags = { Project = "swiftai", ManagedBy = "terraform", Stack = "bootstrap" }
+    tags = { Project = "agentic-recruiter", ManagedBy = "terraform", Stack = "bootstrap" }
   }
 }
 
 data "aws_caller_identity" "current" {}
 
 resource "aws_s3_bucket" "state" {
-  bucket = "swiftai-tfstate-${data.aws_caller_identity.current.account_id}"
+  bucket = "agentic-recruiter-tfstate-${data.aws_caller_identity.current.account_id}"
 }
 
 resource "aws_s3_bucket_versioning" "state" {
@@ -1102,7 +1102,7 @@ data "aws_iam_policy_document" "github_trust" {
 
 # AdministratorAccess because Terraform creates IAM roles; scoping this down is a known follow-up (spec, CI/CD).
 resource "aws_iam_role" "deploy" {
-  name               = "swiftai-github-deploy"
+  name               = "agentic-recruiter-github-deploy"
   assume_role_policy = data.aws_iam_policy_document.github_trust.json
 }
 
@@ -1131,7 +1131,7 @@ Expected: after the human reviews and approves the plan, 8 resources created and
 - [ ] **Step 5: Write the backend config for the main stack**
 
 Run: `mkdir -p infra/main && printf 'bucket = "%s"\n' "$(terraform -chdir=infra/bootstrap output -raw state_bucket)" > infra/main/backend.hcl && cat infra/main/backend.hcl`
-Expected: `bucket = "swiftai-tfstate-<account_id>"`.
+Expected: `bucket = "agentic-recruiter-tfstate-<account_id>"`.
 
 - [ ] **Step 6: Commit**
 
@@ -1163,7 +1163,7 @@ terraform {
   }
   # bucket comes from backend.hcl: terraform init -backend-config=backend.hcl
   backend "s3" {
-    key          = "swiftai/main.tfstate"
+    key          = "agentic-recruiter/main.tfstate"
     region       = "us-east-1"
     encrypt      = true
     use_lockfile = true
@@ -1188,7 +1188,7 @@ variable "region" {
 
 variable "project" {
   type    = string
-  default = "swiftai"
+  default = "agentic-recruiter"
 }
 
 variable "image_tag" {
@@ -1501,7 +1501,7 @@ git commit -m "Terraform main stack: VPC with one NAT gateway, ECR, DynamoDB tab
 
 **Interfaces:**
 - Consumes: everything Task 8 produces; `aws_lb_target_group.recruiter`, `aws_lb_listener.http`, `aws_lb.recruiter`, `aws_security_group.alb` (Task 10 — write Task 10's `edge.tf` before running `validate` here, or validate both together at the end of Task 10).
-- Produces: `aws_ecs_cluster.main`, `aws_security_group.task[<name>]`, `aws_ecs_task_definition.task[<name>]` for `rag-api`, `recruiter-api`, `voice-worker`, `ingest`; services for the first three; DNS names `rag-api.swiftai.internal`, `recruiter-api.swiftai.internal`; `local.scaling`.
+- Produces: `aws_ecs_cluster.main`, `aws_security_group.task[<name>]`, `aws_ecs_task_definition.task[<name>]` for `rag-api`, `recruiter-api`, `voice-worker`, `ingest`; services for the first three; DNS names `rag-api.agentic-recruiter.internal`, `recruiter-api.agentic-recruiter.internal`; `local.scaling`.
 
 - [ ] **Step 1: Write `infra/main/ecs.tf`**
 
@@ -1532,7 +1532,7 @@ locals {
       cpu     = 512
       memory  = 1024
       role    = null
-      command = ["uvicorn", "agentic_jev_rag.rag.api:create_default_rag_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+      command = ["uvicorn", "agentic_recruiter.rag.api:create_default_rag_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
       env     = { QDRANT_URL = var.qdrant_url, SYSTEM_1 = var.system_1 }
       secrets = ["OPEN_ROUTER_API_TOKEN", "QDRANT_API_KEY"]
     }
@@ -1541,7 +1541,7 @@ locals {
       cpu     = 512
       memory  = 1024
       role    = aws_iam_role.recruiter.arn
-      command = ["uvicorn", "agentic_jev_rag.recruiter.api:create_default_recruiter_app", "--factory", "--host", "0.0.0.0", "--port", "8001"]
+      command = ["uvicorn", "agentic_recruiter.recruiter.api:create_default_recruiter_app", "--factory", "--host", "0.0.0.0", "--port", "8001"]
       env = {
         RAG_URL          = "http://rag-api.${local.internal}:8000"
         SYSTEM_1         = var.system_1
@@ -1556,7 +1556,7 @@ locals {
       cpu     = 1024
       memory  = 2048
       role    = null
-      command = ["python", "-m", "agentic_jev_rag.voice", "start"]
+      command = ["python", "-m", "agentic_recruiter.voice", "start"]
       env     = { RECRUITER_URL = "http://recruiter-api.${local.internal}:8001" }
       secrets = ["OPEN_ROUTER_API_TOKEN", "RECRUITER_API_KEY", "LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET"]
     }
@@ -1565,7 +1565,7 @@ locals {
       cpu     = 512
       memory  = 1024
       role    = null
-      command = ["python", "-m", "agentic_jev_rag.rag.ingest"]
+      command = ["python", "-m", "agentic_recruiter.rag.ingest"]
       env     = { QDRANT_URL = var.qdrant_url }
       secrets = ["OPEN_ROUTER_API_TOKEN", "QDRANT_API_KEY"]
     }
@@ -1917,7 +1917,7 @@ resource "aws_wafv2_web_acl" "api" {
 
 resource "aws_cloudfront_distribution" "api" {
   enabled     = true
-  comment     = "SwiftAI Recruiter API"
+  comment     = "Agentic Recruiter API"
   price_class = "PriceClass_100"
   web_acl_id  = aws_wafv2_web_acl.api.arn
 
@@ -2115,12 +2115,12 @@ registry="$(aws sts get-caller-identity --query Account --output text).dkr.ecr.$
 aws ecr get-login-password --region "$region" | docker login --username AWS --password-stdin "$registry" >/dev/null
 
 for target in api voice; do
-  if aws ecr describe-images --region "$region" --repository-name "swiftai/$target" --image-ids imageTag="$tag" >/dev/null 2>&1; then
-    echo "swiftai/$target:$tag already pushed" >&2
+  if aws ecr describe-images --region "$region" --repository-name "agentic-recruiter/$target" --image-ids imageTag="$tag" >/dev/null 2>&1; then
+    echo "agentic-recruiter/$target:$tag already pushed" >&2
     continue
   fi
-  docker build --platform linux/arm64 --target "$target" -t "$registry/swiftai/$target:$tag" . >&2
-  docker push "$registry/swiftai/$target:$tag" >&2
+  docker build --platform linux/arm64 --target "$target" -t "$registry/agentic-recruiter/$target:$tag" . >&2
+  docker push "$registry/agentic-recruiter/$target:$tag" >&2
 done
 echo "$tag"
 ```
@@ -2139,8 +2139,8 @@ set -a; source .env.aws; set +a
 
 for name in OPEN_ROUTER_API_TOKEN QDRANT_API_KEY RECRUITER_API_KEY LIVEKIT_URL LIVEKIT_API_KEY LIVEKIT_API_SECRET; do
   value="${!name:?$name is not set in .env.aws}"
-  aws secretsmanager put-secret-value --secret-id "swiftai/$name" --secret-string "$value" >/dev/null
-  echo "set swiftai/$name"
+  aws secretsmanager put-secret-value --secret-id "agentic-recruiter/$name" --secret-string "$value" >/dev/null
+  echo "set agentic-recruiter/$name"
 done
 ```
 
@@ -2177,7 +2177,7 @@ echo "ingest task: $task"
 
 aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$task"
 code=$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --query 'tasks[0].containers[0].exitCode' --output text)
-echo "ingest exit code: $code (logs: /ecs/swiftai/ingest)"
+echo "ingest exit code: $code (logs: /ecs/agentic-recruiter/ingest)"
 [ "$code" = "0" ]
 ```
 
@@ -2206,7 +2206,7 @@ git commit -m "Scripts to push images, set secret values from .env.aws and run t
 - [ ] **Step 1: Write the live test** — `tests/test_aws_live.py`:
 
 ```python
-"""The deployed stack, through CloudFront. Run with SWIFTAI_URL and RECRUITER_API_KEY set: uv run pytest -m live tests/test_aws_live.py"""
+"""The deployed stack, through CloudFront. Run with RECRUITER_URL and RECRUITER_API_KEY set: uv run pytest -m live tests/test_aws_live.py"""
 
 import os
 import time
@@ -2216,14 +2216,14 @@ import pytest
 
 pytestmark = pytest.mark.live
 
-URL = os.environ.get("SWIFTAI_URL", "")
+URL = os.environ.get("RECRUITER_URL", "")
 KEY = os.environ.get("RECRUITER_API_KEY", "")
 
 
 @pytest.fixture(scope="module")
 def api():
     if not (URL and KEY):
-        pytest.skip("set SWIFTAI_URL and RECRUITER_API_KEY to check the deployed stack")
+        pytest.skip("set RECRUITER_URL and RECRUITER_API_KEY to check the deployed stack")
     with httpx.Client(base_url=URL, headers={"X-API-Key": KEY}, timeout=60) as client:
         yield client
 
@@ -2273,30 +2273,30 @@ infra/scripts/put-secrets.sh
 TAG=$(infra/scripts/push-images.sh | tail -1); echo "$TAG"
 ```
 
-Expected: 2 ECR repositories and 6 secrets created (after approval); six `set swiftai/...` lines; both images pushed; a 12-character tag printed.
+Expected: 2 ECR repositories and 6 secrets created (after approval); six `set agentic-recruiter/...` lines; both images pushed; a 12-character tag printed.
 
 - [ ] **Step 4: Apply the full stack and index the corpus**
 
 ```bash
 terraform -chdir=infra/main apply -var image_tag="$TAG"
-aws ecs wait services-stable --cluster swiftai --services rag-api recruiter-api voice-worker
+aws ecs wait services-stable --cluster agentic-recruiter --services rag-api recruiter-api voice-worker
 infra/scripts/ingest.sh
 ```
 
-Expected: the apply completes (CloudFront and the VPC origin take 5–15 minutes); services stable; `ingest exit code: 0`. Confirm the SNS subscription email that arrives at `alert_email`. If a service never stabilises, read its logs: `aws logs tail /ecs/swiftai/<service> --since 15m`.
+Expected: the apply completes (CloudFront and the VPC origin take 5–15 minutes); services stable; `ingest exit code: 0`. Confirm the SNS subscription email that arrives at `alert_email`. If a service never stabilises, read its logs: `aws logs tail /ecs/agentic-recruiter/<service> --since 15m`.
 
 - [ ] **Step 5: Check the deployed stack**
 
 ```bash
-export SWIFTAI_URL=$(terraform -chdir=infra/main output -raw api_url)
+export RECRUITER_URL=$(terraform -chdir=infra/main output -raw api_url)
 export RECRUITER_API_KEY=$(grep '^RECRUITER_API_KEY=' .env.aws | cut -d= -f2)
-curl -fsS "$SWIFTAI_URL/health"
+curl -fsS "$RECRUITER_URL/health"
 uv run pytest -m live tests/test_aws_live.py -v
 ```
 
 Expected: `{"status":"ok"}` and 3 passed.
 
-Voice: open the LiveKit Agents Playground for the same LiveKit project, connect, and hold an interview; the worker's logs (`aws logs tail /ecs/swiftai/voice-worker --follow`) show the job and the submitted answers.
+Voice: open the LiveKit Agents Playground for the same LiveKit project, connect, and hold an interview; the worker's logs (`aws logs tail /ecs/agentic-recruiter/voice-worker --follow`) show the job and the submitted answers.
 
 - [ ] **Step 6: Commit**
 
@@ -2431,7 +2431,7 @@ jobs:
           terraform -chdir=infra/main init -input=false -backend-config=backend.hcl
           terraform -chdir=infra/main apply -input=false -auto-approve -var image_tag="$TAG"
       - name: Wait for the services
-        run: aws ecs wait services-stable --cluster swiftai --services rag-api recruiter-api voice-worker
+        run: aws ecs wait services-stable --cluster agentic-recruiter --services rag-api recruiter-api voice-worker
       - name: Index the corpus if it changed
         run: |
           if ! git diff --quiet HEAD~1 HEAD -- corpus; then infra/scripts/ingest.sh; fi

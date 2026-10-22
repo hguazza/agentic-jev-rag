@@ -1,4 +1,4 @@
-# SwiftAI Recruiter. Every Model role is an OpenRouter model ID (ADR 0005).
+# Agentic Recruiter. Every Model role is an OpenRouter model ID (ADR 0005).
 collections = ["candidates", "jobs", "interviews", "policies"]
 qdrant_url = "http://localhost:6333"
 rag_url = "http://localhost:8000"

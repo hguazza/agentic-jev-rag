@@ -9,6 +9,6 @@ set -a; source .env.aws; set +a
 
 for name in OPEN_ROUTER_API_TOKEN QDRANT_API_KEY RECRUITER_API_KEY LIVEKIT_URL LIVEKIT_API_KEY LIVEKIT_API_SECRET; do
   value="${!name:?$name is not set in .env.aws}"
-  aws secretsmanager put-secret-value --secret-id "swiftai/$name" --secret-string "$value" >/dev/null
-  echo "set swiftai/$name"
+  aws secretsmanager put-secret-value --secret-id "agentic-recruiter/$name" --secret-string "$value" >/dev/null
+  echo "set agentic-recruiter/$name"
 done

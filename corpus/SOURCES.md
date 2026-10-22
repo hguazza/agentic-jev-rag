@@ -7,6 +7,6 @@
   rewritten by the System 2 model for fictional Clients, with identifying details removed.
 - **interviews.jsonl**: synthetic interview notes written by the System 2 model for seeded (Candidate, Job) pairs
   and Outcomes.
-- **policies/**: hand-written SwiftAI Recruit policies.
+- **policies/**: hand-written policies for the fictional agency.
 
-Rebuild with `uv run python -m agentic_jev_rag.corpus.build --seed 7` (downloads are cached in `data/raw/`).
+Rebuild with `uv run python -m agentic_recruiter.corpus.build --seed 7` (downloads are cached in `data/raw/`).

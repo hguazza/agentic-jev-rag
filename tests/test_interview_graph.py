@@ -2,8 +2,8 @@
 
 import threading
 
-from agentic_jev_rag.recruiter import interviewer
-from agentic_jev_rag.recruiter.interview_graph import build_interview_graph
+from agentic_recruiter.recruiter import interviewer
+from agentic_recruiter.recruiter.interview_graph import build_interview_graph
 from tests.interview_scripts import (
     ASSESSMENT, PROBE, checking, interview_gateway, interview_question, pending, prompts_for, reply, start, thread,
 )

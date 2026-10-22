@@ -1,7 +1,7 @@
 [project]
-name = "agentic-jev-rag"
+name = "agentic-recruiter"
 version = "0.1.0"
-description = "SwiftAI Recruiter: a FastAPI RAG service and a LangGraph multi-agent recruiter"
+description = "Agentic Recruiter: a FastAPI RAG service and a LangGraph multi-agent recruiter"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

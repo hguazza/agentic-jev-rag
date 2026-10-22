@@ -1,6 +1,6 @@
-# SwiftAI Recruiter
+# Agentic Recruiter
 
-An autonomous AI recruiter for **SwiftAI Recruit**, a fictional recruiting company (`docs/company-overview.md`). It has two services:
+An autonomous AI recruiter for a fictional recruiting agency. It has two services:
 
 - **RAG API** (FastAPI): Search, Match and Ask over a recruiting corpus of CVs, Jobs, interview notes and Policies. It uses hybrid retrieval (dense plus sparse, fused with RRF), a reranker, and grounded answers with citations.
 - **Recruiter API** (FastAPI and LangGraph): a five-agent system (Supervisor, Sourcer, Screener, Interviewer, Compliance). It turns a hiring goal into a **Recruitment report** and reaches the RAG only through HTTP tools.
@@ -43,7 +43,7 @@ Caveats on reading these numbers:
 - **Small samples.** A single example moves accuracy by 2–3 points, and repeated runs vary by that much (the LLM guardrail scored 95% on an earlier run).
 - **Hardest guardrail case.** Both deciders allowed one indirect proxy: "must live within 2 km of the office even though the role is hybrid".
 - **Turn check.** Jev missed no prompt injections and reprompted no real answers; the LLM decider reprompted or redirected one real answer.
-- **Raw files:** `results/system1-2026-10-09/`. Re-run with `uv run python -m agentic_jev_rag.evals.system1`.
+- **Raw files:** `results/system1-2026-10-09/`. Re-run with `uv run python -m agentic_recruiter.evals.system1`.
 
 ### Match evaluation
 
@@ -96,7 +96,7 @@ goal ─► Recruiter API ─► LangGraph: Compliance intake ─► Supervisor 
 | Interviews | 120 interview notes with Outcomes | Synthetic, generated for seeded (Candidate, Job) pairs |
 | Policies | Fair hiring, data protection and consent, interview guide, Scorecards, fast-track, AI oversight | Hand-written |
 
-The built corpus is committed in `corpus/`. Rebuilding it costs about $3: `uv run python -m agentic_jev_rag.corpus.build`. Dataset research is in `docs/research/2026-10-08-recruiting-datasets.md`.
+The built corpus is committed in `corpus/`. Rebuilding it costs about $3: `uv run python -m agentic_recruiter.corpus.build`. Dataset research is in `docs/research/2026-10-08-recruiting-datasets.md`.
 
 ## Run it
 

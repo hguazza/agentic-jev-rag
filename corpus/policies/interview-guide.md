@@ -1,6 +1,6 @@
 # Interview Guide
 
-Every SwiftAI interview, whether held by a recruiter or by the AI Interviewer, follows this guide.
+Every interview, whether held by a recruiter or by the AI Interviewer, follows this guide.
 
 ## Structure
 

@@ -22,7 +22,7 @@ Success is a local demo: with Qdrant, the RAG API and the Recruiter API running 
 ## Architecture
 
 ```
-Agents Playground ⇄ LiveKit Cloud ⇄ Voice worker (agentic_jev_rag.voice)
+Agents Playground ⇄ LiveKit Cloud ⇄ Voice worker (agentic_recruiter.voice)
                                      STT → turn detector → Voice host LLM → TTS
                                                     │ submit_answer() (no text argument)
                                                     ▼ HTTP
@@ -34,9 +34,9 @@ Agents Playground ⇄ LiveKit Cloud ⇄ Voice worker (agentic_jev_rag.voice)
                                           └─ assess      (System 2)
 ```
 
-## Voice worker (`src/agentic_jev_rag/voice/`)
+## Voice worker (`src/agentic_recruiter/voice/`)
 
-A LiveKit Agents worker, run locally with `uv run python -m agentic_jev_rag.voice dev`.
+A LiveKit Agents worker, run locally with `uv run python -m agentic_recruiter.voice dev`.
 
 - **Session**: `AgentSession` with LiveKit Inference STT and TTS (model ids in config), Silero VAD, LiveKit's turn detector, and the Voice host LLM through LiveKit's OpenAI-compatible plugin pointed at OpenRouter.
 - **Which interview**: `candidate_id` and `job_id` come from the joining participant's attributes when set, otherwise from `[voice]` defaults in `configs/recruiter.toml` (a Candidate and Job with valid Consent).

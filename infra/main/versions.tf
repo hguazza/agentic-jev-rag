@@ -8,7 +8,7 @@ terraform {
   }
   # bucket comes from backend.hcl: terraform init -backend-config=backend.hcl
   backend "s3" {
-    key          = "swiftai/main.tfstate"
+    key          = "agentic-recruiter/main.tfstate"
     region       = "us-east-1"
     encrypt      = true
     use_lockfile = true

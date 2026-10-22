@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from agentic_jev_rag.corpus.documents import Document, load_corpus, write_jsonl
-from agentic_jev_rag.corpus.dossier import add_dossiers
-from agentic_jev_rag.gateway import FakeModelGateway
+from agentic_recruiter.corpus.documents import Document, load_corpus, write_jsonl
+from agentic_recruiter.corpus.dossier import add_dossiers
+from agentic_recruiter.gateway import FakeModelGateway
 
 FIXTURE_CORPUS = Path(__file__).parent / "fixtures" / "corpus"
 

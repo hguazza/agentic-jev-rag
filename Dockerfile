@@ -18,9 +18,9 @@ ENV PATH="/app/.venv/bin:$PATH" CONFIG=/app/configs/recruiter.toml
 
 # The voice dependency group, with the Silero VAD and turn-detector model files downloaded at build time.
 FROM base AS voice
-RUN uv sync --frozen --no-dev --group voice && python -m agentic_jev_rag.voice download-files
-CMD ["python", "-m", "agentic_jev_rag.voice", "start"]
+RUN uv sync --frozen --no-dev --group voice && python -m agentic_recruiter.voice download-files
+CMD ["python", "-m", "agentic_recruiter.voice", "start"]
 
 FROM base AS api
 EXPOSE 8000
-CMD ["uvicorn", "agentic_jev_rag.rag.api:create_default_rag_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "agentic_recruiter.rag.api:create_default_rag_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]

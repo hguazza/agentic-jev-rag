@@ -5,8 +5,8 @@ import re
 import pytest
 from fastapi.testclient import TestClient
 
-from agentic_jev_rag.gateway import ToolCall
-from agentic_jev_rag.recruiter.api import create_recruiter_app
+from agentic_recruiter.gateway import ToolCall
+from agentic_recruiter.recruiter.api import create_recruiter_app
 from tests.interview_scripts import interview_gateway, interview_question, prompts_for
 from tests.rag_scripts import TURN_OUTCOMES, by_agent, scripted_gateway
 
@@ -279,7 +279,7 @@ def test_an_interview_continues_on_another_instance_when_checkpoints_are_in_dyna
 
 
 def test_a_run_whose_models_fail_is_reported_as_failed(client):
-    from agentic_jev_rag.openrouter import OpenRouterError
+    from agentic_recruiter.openrouter import OpenRouterError
 
     def down(model, messages, tools):
         raise OpenRouterError("OpenRouter is down")
@@ -295,7 +295,7 @@ def test_a_run_whose_models_fail_is_reported_as_failed(client):
 
 
 def test_a_run_left_running_too_long_is_reported_as_interrupted(recruiter_context):
-    from agentic_jev_rag.recruiter.persistence import MemoryRuns, RunRecord
+    from agentic_recruiter.recruiter.persistence import MemoryRuns, RunRecord
 
     runs = MemoryRuns()
     runs.put(RunRecord(run_id="old", status="running", started_at=0.0))

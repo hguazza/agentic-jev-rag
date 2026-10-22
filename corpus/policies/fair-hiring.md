@@ -1,6 +1,6 @@
 # Fair Hiring Policy
 
-SwiftAI Recruit selects candidates on job-related merit only. This policy applies to every recruiter, every client search and every automated agent, including the AI Recruiter.
+The agency selects candidates on job-related merit only. This policy applies to every recruiter, every client search and every automated agent, including the AI Recruiter.
 
 ## Protected characteristics
 

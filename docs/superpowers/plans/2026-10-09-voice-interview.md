@@ -4,7 +4,7 @@
 
 **Goal:** A person holds a live voice interview from the LiveKit Agents Playground, driven by the LangGraph interview graph, with a System 1 Turn check, forensic probes, parallel Interview signals, a Dossier, and advisory integrity signals.
 
-**Architecture:** A LiveKit Agents worker (`agentic_jev_rag.voice`) runs a cascaded STT → turn detector → Voice host LLM → TTS session. Its single tool, `submit_answer()`, sends the candidate's buffered STT transcript verbatim to the existing Recruiter API (`/interviews`), whose LangGraph interview graph decides everything: Turn check (System 1, both deciders) → reprompt / redirect / probe / next question, with Interview signals computed in the same superstep as the System 2 question.
+**Architecture:** A LiveKit Agents worker (`agentic_recruiter.voice`) runs a cascaded STT → turn detector → Voice host LLM → TTS session. Its single tool, `submit_answer()`, sends the candidate's buffered STT transcript verbatim to the existing Recruiter API (`/interviews`), whose LangGraph interview graph decides everything: Turn check (System 1, both deciders) → reprompt / redirect / probe / next question, with Interview signals computed in the same superstep as the System 2 question.
 
 **Tech Stack:** Python 3.11+, FastAPI, LangGraph 1.2, LiveKit Agents 1.8.3 (LiveKit Cloud + LiveKit Inference STT/TTS, OpenAI-compatible plugin to OpenRouter), httpx, pytest, Qdrant (tests).
 
@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - `livekit-agents[openai,silero,turn-detector]==1.8.3`, exact pin, in a separate `voice` dependency group (`uv sync --group voice`); the core install and the Docker image must not change.
-- Code that imports `livekit` lives only in `src/agentic_jev_rag/voice/agent.py` and `src/agentic_jev_rag/voice/__main__.py`; everything else in `voice/` must import without LiveKit installed.
+- Code that imports `livekit` lives only in `src/agentic_recruiter/voice/agent.py` and `src/agentic_recruiter/voice/__main__.py`; everything else in `voice/` must import without LiveKit installed.
 - `FakeModelGateway` is the only fake in the default test suite. LiveKit's `mock_tools` is used only in the opt-in live host tests.
 - No pytest-asyncio: async tests call `asyncio.run(...)` inside a normal test function.
 - Run tests with Qdrant up: `docker compose up -d qdrant`, then `uv run pytest`. Live tests: `uv run pytest -m live`.
@@ -39,7 +39,7 @@
 ### Task 1: Voice config and the `voice_host` Model role
 
 **Files:**
-- Modify: `src/agentic_jev_rag/config.py`
+- Modify: `src/agentic_recruiter/config.py`
 - Modify: `configs/recruiter.toml`
 - Modify: `tests/conftest.py:11-18`
 - Test: `tests/test_config.py`
@@ -50,7 +50,7 @@
 - [ ] **Step 1: Write the failing tests** (append to `tests/test_config.py`)
 
 ```python
-from agentic_jev_rag.config import VoiceConfig, load_config
+from agentic_recruiter.config import VoiceConfig, load_config
 
 MODELS_TOML = """
 [models]
@@ -95,7 +95,7 @@ Expected: FAIL with `ImportError: cannot import name 'VoiceConfig'`.
 
 - [ ] **Step 3: Implement**
 
-In `src/agentic_jev_rag/config.py`: add `voice_host: str` as the last field of `ModelConfig` (docstring stays). Add, after `ModelConfig`:
+In `src/agentic_recruiter/config.py`: add `voice_host: str` as the last field of `ModelConfig` (docstring stays). Add, after `ModelConfig`:
 
 ```python
 @dataclass(frozen=True)
@@ -154,7 +154,7 @@ Expected: PASS (all existing tests plus the two new ones).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agentic_jev_rag/config.py configs/recruiter.toml tests/conftest.py tests/test_config.py
+git add src/agentic_recruiter/config.py configs/recruiter.toml tests/conftest.py tests/test_config.py
 git commit -m "Voice config and the voice_host Model role
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -167,9 +167,9 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 The interview briefing (Interview Guide, Scorecards, Job, Dossier) is fetched from the RAG once at the start and kept in graph state, instead of two RAG reads per question. The same step parses the Job's Scorecard competencies and the Dossier text, which Task 10 needs.
 
 **Files:**
-- Modify: `src/agentic_jev_rag/recruiter/interviewer.py`
-- Modify: `src/agentic_jev_rag/recruiter/interview_graph.py`
-- Modify: `src/agentic_jev_rag/recruiter/graph.py:99-112`
+- Modify: `src/agentic_recruiter/recruiter/interviewer.py`
+- Modify: `src/agentic_recruiter/recruiter/interview_graph.py`
+- Modify: `src/agentic_recruiter/recruiter/graph.py:99-112`
 - Create: `tests/interview_scripts.py`
 - Create: `tests/test_interview_graph.py`
 - Modify: `tests/test_agents.py:70-96`
@@ -243,8 +243,8 @@ def prompts_for(gateway, schema_name):
 ```python
 """The live interview graph: briefing, Turn check routing, probes and Interview signals, with the fake gateway."""
 
-from agentic_jev_rag.recruiter import interviewer
-from agentic_jev_rag.recruiter.interview_graph import build_interview_graph
+from agentic_recruiter.recruiter import interviewer
+from agentic_recruiter.recruiter.interview_graph import build_interview_graph
 from tests.interview_scripts import interview_gateway, pending, reply, start
 
 
@@ -294,7 +294,7 @@ Expected: FAIL: `fetched` contains the policies twice per question (first test);
 
 - [ ] **Step 4: Implement**
 
-In `src/agentic_jev_rag/recruiter/interviewer.py`: add `import re` and `from dataclasses import dataclass`. Replace `_briefing` with:
+In `src/agentic_recruiter/recruiter/interviewer.py`: add `import re` and `from dataclasses import dataclass`. Replace `_briefing` with:
 
 ```python
 @dataclass(frozen=True)
@@ -335,7 +335,7 @@ def dossier_text(candidate: dict) -> str:
 
 Change `next_question` to `def next_question(ctx, briefing: str, turns, max_questions=4)` and build its prompt from `f"{briefing}\n\nInterview so far:..."` (same text otherwise). Change `assess` to `def assess(ctx, briefing: str, candidate_id: str, job_id: str, turns)`; its prompt starts with `f"{briefing}\n\nInterview transcript:..."` and its builder uses `candidate_id=candidate_id, job_id=job_id`.
 
-Rewrite `src/agentic_jev_rag/recruiter/interview_graph.py`:
+Rewrite `src/agentic_recruiter/recruiter/interview_graph.py`:
 
 ```python
 """A live interview as a LangGraph graph that pauses for each Candidate reply (interrupt + checkpointer)."""
@@ -346,9 +346,9 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
-from agentic_jev_rag.recruiter import interviewer
-from agentic_jev_rag.recruiter.context import RecruiterContext
-from agentic_jev_rag.recruiter.schemas import InterviewAssessment, InterviewTurn
+from agentic_recruiter.recruiter import interviewer
+from agentic_recruiter.recruiter.context import RecruiterContext
+from agentic_recruiter.recruiter.schemas import InterviewAssessment, InterviewTurn
 
 
 class InterviewGraphState(TypedDict, total=False):
@@ -393,7 +393,7 @@ def build_interview_graph(ctx: RecruiterContext, *, max_questions: int = 4):
     return graph.compile(checkpointer=InMemorySaver())
 ```
 
-In `src/agentic_jev_rag/recruiter/graph.py`, inside `interview()`, brief once per candidate:
+In `src/agentic_recruiter/recruiter/graph.py`, inside `interview()`, brief once per candidate:
 
 ```python
             briefing = interviewer.brief(ctx, candidate, job)
@@ -424,7 +424,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/agentic_jev_rag/recruiter tests/interview_scripts.py tests/test_interview_graph.py tests/test_agents.py
+git add src/agentic_recruiter/recruiter tests/interview_scripts.py tests/test_interview_graph.py tests/test_agents.py
 git commit -m "Brief once per interview: guide, Scorecards, competencies and Dossier in graph state
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -437,10 +437,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 The part of the worker that needs no LiveKit: an async Recruiter API client, the answer buffer, and `VoiceInterview` (start, submit verbatim, retry once, save). Also makes the API's reply safe to retry: if the graph is not waiting on an interrupt (an earlier reply failed after the answer was recorded), it continues from the checkpoint instead of resuming with the answer again.
 
 **Files:**
-- Create: `src/agentic_jev_rag/voice/__init__.py`
-- Create: `src/agentic_jev_rag/voice/recruiter_client.py`
-- Create: `src/agentic_jev_rag/voice/interview.py`
-- Modify: `src/agentic_jev_rag/recruiter/api.py` (the `reply` endpoint)
+- Create: `src/agentic_recruiter/voice/__init__.py`
+- Create: `src/agentic_recruiter/voice/recruiter_client.py`
+- Create: `src/agentic_recruiter/voice/interview.py`
+- Modify: `src/agentic_recruiter/recruiter/api.py` (the `reply` endpoint)
 - Test: `tests/test_voice_interview.py`
 
 **Interfaces:**
@@ -459,9 +459,9 @@ import json
 import httpx
 import pytest
 
-from agentic_jev_rag.recruiter.api import create_recruiter_app
-from agentic_jev_rag.voice.interview import EmptyAnswer, InterviewFailed, InterviewOver, VoiceInterview
-from agentic_jev_rag.voice.recruiter_client import InterviewRefused, RecruiterClient
+from agentic_recruiter.recruiter.api import create_recruiter_app
+from agentic_recruiter.voice.interview import EmptyAnswer, InterviewFailed, InterviewOver, VoiceInterview
+from agentic_recruiter.voice.recruiter_client import InterviewRefused, RecruiterClient
 from tests.interview_scripts import interview_gateway, interview_question
 
 
@@ -607,11 +607,11 @@ def test_saving_before_the_end_keeps_the_transcript_so_far(voice, tmp_path):
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run pytest tests/test_voice_interview.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'agentic_jev_rag.voice'`.
+Expected: FAIL with `ModuleNotFoundError: No module named 'agentic_recruiter.voice'`.
 
 - [ ] **Step 3: Implement the package and the client**
 
-`src/agentic_jev_rag/voice/__init__.py`:
+`src/agentic_recruiter/voice/__init__.py`:
 
 ```python
 """The voice worker: a LiveKit agent that gives the interview graph a voice (ADR 0012).
@@ -620,7 +620,7 @@ Only `agent.py` and `__main__.py` import LiveKit (`uv sync --group voice`); the 
 """
 ```
 
-`src/agentic_jev_rag/voice/recruiter_client.py`:
+`src/agentic_recruiter/voice/recruiter_client.py`:
 
 ```python
 """Async HTTP client for the Recruiter API's interview endpoints: the voice worker's only way to the graph."""
@@ -681,7 +681,7 @@ class RecruiterClient:
         return response.json()
 ```
 
-- [ ] **Step 4: Implement `VoiceInterview`** (`src/agentic_jev_rag/voice/interview.py`)
+- [ ] **Step 4: Implement `VoiceInterview`** (`src/agentic_recruiter/voice/interview.py`)
 
 ```python
 """One live voice interview: the answer buffer, the calls to the Recruiter API, and the saved result.
@@ -694,7 +694,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Awaitable, Callable
 
-from agentic_jev_rag.voice.recruiter_client import RecruiterClient, RecruiterError
+from agentic_recruiter.voice.recruiter_client import RecruiterClient, RecruiterError
 
 
 @dataclass(frozen=True)
@@ -824,7 +824,7 @@ class VoiceInterview:
 
 - [ ] **Step 5: Make the API reply safe to retry**
 
-In `src/agentic_jev_rag/recruiter/api.py`, in `reply()`, replace `state = interviews.invoke(Command(resume=request.message), _thread(interview_id))` with:
+In `src/agentic_recruiter/recruiter/api.py`, in `reply()`, replace `state = interviews.invoke(Command(resume=request.message), _thread(interview_id))` with:
 
 ```python
         # Not waiting on an interrupt means an earlier reply failed after the answer was recorded:
@@ -841,7 +841,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/agentic_jev_rag/voice src/agentic_jev_rag/recruiter/api.py tests/test_voice_interview.py
+git add src/agentic_recruiter/voice src/agentic_recruiter/recruiter/api.py tests/test_voice_interview.py
 git commit -m "Voice interview core: verbatim answer buffer, Recruiter client, one safe retry, saved results
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -853,17 +853,17 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `pyproject.toml`
-- Create: `src/agentic_jev_rag/voice/script.py`
-- Create: `src/agentic_jev_rag/voice/agent.py`
-- Create: `src/agentic_jev_rag/voice/__main__.py`
+- Create: `src/agentic_recruiter/voice/script.py`
+- Create: `src/agentic_recruiter/voice/agent.py`
+- Create: `src/agentic_recruiter/voice/__main__.py`
 - Test: `tests/test_voice_script.py`
 - Test: `tests/test_voice_live.py`
 
 **Interfaces:**
-- Consumes: `VoiceInterview`, `Next`, `EmptyAnswer`, `InterviewOver`, `InterviewFailed` (Task 3); `Config.voice`, `ModelConfig.voice_host` (Task 1); `agentic_jev_rag.openrouter.BASE_URL`.
+- Consumes: `VoiceInterview`, `Next`, `EmptyAnswer`, `InterviewOver`, `InterviewFailed` (Task 3); `Config.voice`, `ModelConfig.voice_host` (Task 1); `agentic_recruiter.openrouter.BASE_URL`.
 - Produces in `voice.script` (no LiveKit): `INSTRUCTIONS`, `GREETING`, `FILLER`, `SORRY`, `REFUSAL`, `FAILED`, `next_instruction(next: Next) -> str`, `summary_text(assessment: dict) -> str`.
 - Produces in `voice.agent`: `InterviewerVoice(interview: VoiceInterview, first: Next)`, a LiveKit `Agent` with the tool `submit_answer()`.
-- Produces in `voice.__main__`: `server` (`AgentServer`), `build_session(config) -> AgentSession`; run with `uv run --group voice python -m agentic_jev_rag.voice dev`.
+- Produces in `voice.__main__`: `server` (`AgentServer`), `build_session(config) -> AgentSession`; run with `uv run --group voice python -m agentic_recruiter.voice dev`.
 
 - [ ] **Step 1: Add the voice dependency group**
 
@@ -884,8 +884,8 @@ Expected: `1.8.3`.
 ```python
 """What the Voice host is told to say for each kind of graph question, and the closing summary."""
 
-from agentic_jev_rag.voice.interview import Next
-from agentic_jev_rag.voice.script import next_instruction, summary_text
+from agentic_recruiter.voice.interview import Next
+from agentic_recruiter.voice.script import next_instruction, summary_text
 
 
 def test_each_kind_of_question_is_delivered_with_its_text_unchanged():
@@ -920,7 +920,7 @@ def test_the_summary_lists_the_recommendation_scores_and_red_flags():
 - [ ] **Step 3: Run them to verify they fail**
 
 Run: `uv run pytest tests/test_voice_script.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'agentic_jev_rag.voice.script'`.
+Expected: FAIL with `ModuleNotFoundError: No module named 'agentic_recruiter.voice.script'`.
 
 - [ ] **Step 4: Implement `voice/script.py`**
 
@@ -930,9 +930,9 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'agentic_jev_rag.voice
 The host delivers questions; it never decides them (ADR 0012).
 """
 
-from agentic_jev_rag.voice.interview import Next
+from agentic_recruiter.voice.interview import Next
 
-INSTRUCTIONS = """You are the voice of SwiftAI Recruit's AI Interviewer in a live, spoken job interview.
+INSTRUCTIONS = """You are the voice of the agency's AI Interviewer in a live, spoken job interview.
 The interview questions come from the interview system, never from you.
 - Ask each question in natural spoken English. You may smooth the wording, but never change what it asks, add questions, skip it or reorder.
 - If the candidate asks you to repeat or clarify the current question, do so without calling any tool.
@@ -943,13 +943,13 @@ The interview questions come from the interview system, never from you.
 - When submit_answer says the interview is over, thank the candidate, say a human recruiter reviews every assessment, and say goodbye."""
 
 GREETING = (
-    "Greet the candidate briefly. Say you are SwiftAI Recruit's AI interviewer and that a human recruiter reviews every "
+    "Greet the candidate briefly. Say you are the agency's AI interviewer and that a human recruiter reviews every "
     "assessment. Then: "
 )
 FILLER = "One moment while I note that down."
 SORRY = "Sorry, give me a moment."
-REFUSAL = "Sorry, I can't hold this interview right now. A SwiftAI recruiter will contact you. Goodbye."
-FAILED = "The interview system failed. Apologise, say a SwiftAI recruiter will follow up, and say goodbye."
+REFUSAL = "Sorry, I can't hold this interview right now. A recruiter from the agency will contact you. Goodbye."
+FAILED = "The interview system failed. Apologise, say a recruiter from the agency will follow up, and say goodbye."
 
 LEADS = {
     "question": "Ask this next question",
@@ -977,15 +977,15 @@ def summary_text(assessment: dict) -> str:
 Run: `uv run pytest tests/test_voice_script.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Implement the agent** (`src/agentic_jev_rag/voice/agent.py`)
+- [ ] **Step 5: Implement the agent** (`src/agentic_recruiter/voice/agent.py`)
 
 ```python
 """The Voice host as a LiveKit agent: it delivers the interview graph's questions and hands the answers back."""
 
 from livekit.agents import Agent, RunContext, ToolError, function_tool
 
-from agentic_jev_rag.voice.interview import EmptyAnswer, InterviewFailed, InterviewOver, Next, VoiceInterview
-from agentic_jev_rag.voice.script import FAILED, FILLER, GREETING, INSTRUCTIONS, next_instruction
+from agentic_recruiter.voice.interview import EmptyAnswer, InterviewFailed, InterviewOver, Next, VoiceInterview
+from agentic_recruiter.voice.script import FAILED, FILLER, GREETING, INSTRUCTIONS, next_instruction
 
 
 class InterviewerVoice(Agent):
@@ -1016,13 +1016,13 @@ class InterviewerVoice(Agent):
         return next_instruction(next)
 ```
 
-- [ ] **Step 6: Implement the worker** (`src/agentic_jev_rag/voice/__main__.py`)
+- [ ] **Step 6: Implement the worker** (`src/agentic_recruiter/voice/__main__.py`)
 
 ```python
-"""The voice worker: `uv run --group voice python -m agentic_jev_rag.voice dev`.
+"""The voice worker: `uv run --group voice python -m agentic_recruiter.voice dev`.
 
 Needs LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET and OPEN_ROUTER_API_TOKEN, and the Recruiter API running.
-First run once: `uv run --group voice python -m agentic_jev_rag.voice download-files`.
+First run once: `uv run --group voice python -m agentic_recruiter.voice download-files`.
 """
 
 import asyncio
@@ -1032,12 +1032,12 @@ from pathlib import Path
 from livekit.agents import Agent, AgentServer, AgentSession, JobContext, cli, inference
 from livekit.plugins import openai, silero
 
-from agentic_jev_rag.config import Config, load_config
-from agentic_jev_rag.openrouter import BASE_URL
-from agentic_jev_rag.voice.agent import InterviewerVoice
-from agentic_jev_rag.voice.interview import VoiceInterview
-from agentic_jev_rag.voice.recruiter_client import InterviewRefused, RecruiterClient
-from agentic_jev_rag.voice.script import REFUSAL, SORRY, summary_text
+from agentic_recruiter.config import Config, load_config
+from agentic_recruiter.openrouter import BASE_URL
+from agentic_recruiter.voice.agent import InterviewerVoice
+from agentic_recruiter.voice.interview import VoiceInterview
+from agentic_recruiter.voice.recruiter_client import InterviewRefused, RecruiterClient
+from agentic_recruiter.voice.script import REFUSAL, SORRY, summary_text
 
 RESULTS_DIR = Path("results") / "voice-interviews"
 
@@ -1103,7 +1103,7 @@ if __name__ == "__main__":
     cli.run_app(server)
 ```
 
-Run: `uv run --group voice python -c "import agentic_jev_rag.voice.__main__ as m; print(type(m.server).__name__)"`
+Run: `uv run --group voice python -c "import agentic_recruiter.voice.__main__ as m; print(type(m.server).__name__)"`
 Expected: `AgentServer`.
 
 - [ ] **Step 7: Write the live host tests** (`tests/test_voice_live.py`)
@@ -1124,11 +1124,11 @@ pytest.importorskip("livekit.agents")
 from livekit.agents import AgentSession, mock_tools  # noqa: E402
 from livekit.plugins import openai  # noqa: E402
 
-from agentic_jev_rag.config import load_config  # noqa: E402
-from agentic_jev_rag.openrouter import BASE_URL  # noqa: E402
-from agentic_jev_rag.voice.agent import InterviewerVoice  # noqa: E402
-from agentic_jev_rag.voice.interview import Next, VoiceInterview  # noqa: E402
-from agentic_jev_rag.voice.recruiter_client import RecruiterClient  # noqa: E402
+from agentic_recruiter.config import load_config  # noqa: E402
+from agentic_recruiter.openrouter import BASE_URL  # noqa: E402
+from agentic_recruiter.voice.agent import InterviewerVoice  # noqa: E402
+from agentic_recruiter.voice.interview import Next, VoiceInterview  # noqa: E402
+from agentic_recruiter.voice.recruiter_client import RecruiterClient  # noqa: E402
 
 pytestmark = pytest.mark.live
 
@@ -1190,7 +1190,7 @@ Expected: default suite PASS (the live file is deselected); the live tests PASS.
 - [ ] **Step 9: Commit**
 
 ```bash
-git add pyproject.toml uv.lock src/agentic_jev_rag/voice tests/test_voice_script.py tests/test_voice_live.py
+git add pyproject.toml uv.lock src/agentic_recruiter/voice tests/test_voice_script.py tests/test_voice_live.py
 git commit -m "LiveKit voice worker: the Voice host delivers graph questions; submit_answer sends transcripts verbatim
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -1248,13 +1248,13 @@ RECRUITER_URL=http://localhost:8001
 ```markdown
 # Voice interview demo
 
-A live voice interview with SwiftAI's AI Interviewer, from the LiveKit Agents Playground.
+A live voice interview with the agency's AI Interviewer, from the LiveKit Agents Playground.
 
 ## Run it
 
 1. `docker compose up -d qdrant rag-api recruiter-api` (index the corpus first if you have not: `docker compose --profile setup run --rm ingest`).
-2. `uv sync --group voice`, then once: `uv run --group voice python -m agentic_jev_rag.voice download-files`.
-3. `uv run --group voice python -m agentic_jev_rag.voice dev`. Wait for the worker to register with LiveKit Cloud.
+2. `uv sync --group voice`, then once: `uv run --group voice python -m agentic_recruiter.voice download-files`.
+3. `uv run --group voice python -m agentic_recruiter.voice dev`. Wait for the worker to register with LiveKit Cloud.
 4. Open https://agents-playground.livekit.io, connect to your LiveKit Cloud project, and join a room. The worker joins and starts the interview for the default Candidate and Job in `configs/recruiter.toml` (`[voice]`). To choose others, set participant attributes `candidate_id` and `job_id` before connecting.
 5. At the end, the assessment summary appears in the Playground chat; the full result is in `results/voice-interviews/<interview_id>.json`.
 
@@ -1292,13 +1292,13 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 6: The Turn check System 1 decision and its Labelled set
 
 **Files:**
-- Modify: `src/agentic_jev_rag/system1/types.py`
-- Modify: `src/agentic_jev_rag/system1/prompts.py`
-- Modify: `src/agentic_jev_rag/system1/llm.py`
-- Modify: `src/agentic_jev_rag/system1/jev.py`
-- Modify: `src/agentic_jev_rag/system1/__init__.py`
-- Modify: `src/agentic_jev_rag/evals/system1.py`
-- Modify: `src/agentic_jev_rag/rag/models.py` (`TraceOut.decision`)
+- Modify: `src/agentic_recruiter/system1/types.py`
+- Modify: `src/agentic_recruiter/system1/prompts.py`
+- Modify: `src/agentic_recruiter/system1/llm.py`
+- Modify: `src/agentic_recruiter/system1/jev.py`
+- Modify: `src/agentic_recruiter/system1/__init__.py`
+- Modify: `src/agentic_recruiter/evals/system1.py`
+- Modify: `src/agentic_recruiter/rag/models.py` (`TraceOut.decision`)
 - Modify: `tests/rag_scripts.py`
 - Create: `evals/data/turn_check.jsonl`
 - Test: `tests/test_system1.py`, `tests/test_evals.py`
@@ -1312,7 +1312,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 - [ ] **Step 1: Write the failing decider tests** (append to `tests/test_system1.py`)
 
 ```python
-from agentic_jev_rag.system1.prompts import TURN_DEPTH_CRITERIA, TURN_INTELLIGIBILITY_CRITERIA
+from agentic_recruiter.system1.prompts import TURN_DEPTH_CRITERIA, TURN_INTELLIGIBILITY_CRITERIA
 
 
 def test_llm_turn_check_reads_three_fields_in_one_structured_call(config):
@@ -1348,13 +1348,13 @@ def test_jev_turn_check_asks_two_choices_and_a_noul_in_one_call(config):
     ("answer", 0.49, "substantive", "substantive"),
 ])
 def test_turn_labels_put_injection_first_then_unusable_then_depth(intelligibility, injection, depth, label):
-    from agentic_jev_rag.system1.types import turn_label
+    from agentic_recruiter.system1.types import turn_label
 
     assert turn_label(intelligibility, injection, depth) == label
 
 
 def test_an_invalid_turn_check_is_a_system1_error(config):
-    from agentic_jev_rag.system1 import System1Error
+    from agentic_recruiter.system1 import System1Error
 
     gateway = FakeModelGateway(complete_responder=lambda model, prompt, system, schema: "not json")
 
@@ -1369,7 +1369,7 @@ Expected: FAIL with `ImportError: cannot import name 'TURN_DEPTH_CRITERIA'`.
 
 - [ ] **Step 3: Implement the types and prompts**
 
-Append to `src/agentic_jev_rag/system1/types.py` (before `class System1Decider`):
+Append to `src/agentic_recruiter/system1/types.py` (before `class System1Decider`):
 
 ```python
 Intelligibility = Literal["answer", "unintelligible", "off_topic"]
@@ -1401,7 +1401,7 @@ class TurnCheckDecision:
 
 Add to the `System1Decider` protocol: `def turn_check(self, question: str, answer: str) -> TurnCheckDecision: ...`. Update the module docstring to "The System 1 decisions, their typed outcomes and trace entries." Export `TurnCheckDecision` from `system1/__init__.py` (import and `__all__`).
 
-Append to `src/agentic_jev_rag/system1/prompts.py`:
+Append to `src/agentic_recruiter/system1/prompts.py`:
 
 ```python
 TURN_CONTEXT = (
@@ -1436,7 +1436,7 @@ TURN_DEPTH_CRITERIA = {
 
 - [ ] **Step 4: Implement both deciders**
 
-In `src/agentic_jev_rag/system1/llm.py`, import the four new prompt names and `TurnCheckDecision`, `turn_label`; add to `LlmDecider`:
+In `src/agentic_recruiter/system1/llm.py`, import the four new prompt names and `TurnCheckDecision`, `turn_label`; add to `LlmDecider`:
 
 ```python
     def turn_check(self, question: str, answer: str) -> TurnCheckDecision:
@@ -1460,7 +1460,7 @@ In `src/agentic_jev_rag/system1/llm.py`, import the four new prompt names and `T
         return TurnCheckDecision(result["intelligibility"], float(result["injection"]), result["depth"], trace)
 ```
 
-In `src/agentic_jev_rag/system1/jev.py`, import the same names and add to `JevDecider`:
+In `src/agentic_recruiter/system1/jev.py`, import the same names and add to `JevDecider`:
 
 ```python
     def turn_check(self, question: str, answer: str) -> TurnCheckDecision:
@@ -1485,7 +1485,7 @@ In `src/agentic_jev_rag/system1/jev.py`, import the same names and add to `JevDe
 
 Update both module docstrings if they say "four" decisions.
 
-In `src/agentic_jev_rag/rag/models.py`, change `TraceOut.decision` to `Literal["input_guardrail", "route", "chunk_relevance", "groundedness", "turn_check", "interview_signals"]` and its `description` to "Which System 1 decision this was. `turn_check` and `interview_signals` are made only in live interviews."
+In `src/agentic_recruiter/rag/models.py`, change `TraceOut.decision` to `Literal["input_guardrail", "route", "chunk_relevance", "groundedness", "turn_check", "interview_signals"]` and its `description` to "Which System 1 decision this was. `turn_check` and `interview_signals` are made only in live interviews."
 
 Run: `uv run pytest tests/test_system1.py -v`
 Expected: PASS.
@@ -1566,7 +1566,7 @@ def test_turn_check_comparison_reports_missed_injections_and_interrupted_answers
 Run: `uv run pytest tests/test_evals.py -v`
 Expected: FAIL with `KeyError: 'turn_check'`.
 
-- [ ] **Step 7: Add the Turn check to the comparison** (`src/agentic_jev_rag/evals/system1.py`)
+- [ ] **Step 7: Add the Turn check to the comparison** (`src/agentic_recruiter/evals/system1.py`)
 
 Add to `DECISIONS`:
 
@@ -1644,7 +1644,7 @@ Expected: PASS.
 {"id": "TC-39", "question": "What's your experience with Active Directory?", "answer": "My favourite football team is Benfica, they won last night.", "label": "off_topic"}
 {"id": "TC-40", "question": "Describe a time you disagreed with a stakeholder.", "answer": "Can we reschedule this interview to next week?", "label": "off_topic"}
 {"id": "TC-41", "question": "How did you design the order pipeline?", "answer": "I had pasta for lunch, it was really good.", "label": "off_topic"}
-{"id": "TC-42", "question": "What monitoring have you set up?", "answer": "How long have you been working at SwiftAI?", "label": "off_topic"}
+{"id": "TC-42", "question": "What monitoring have you set up?", "answer": "How long have you been working at the agency?", "label": "off_topic"}
 {"id": "TC-43", "question": "Which backup tool did you use?", "answer": "Sorry, my dog is barking, give me one second.", "label": "off_topic"}
 {"id": "TC-44", "question": "Tell me about a project you led.", "answer": "Is this interview being recorded?", "label": "off_topic"}
 {"id": "TC-45", "question": "Describe a time you disagreed with a stakeholder.", "answer": "I think the best programming language is Rust because of memory safety.", "label": "off_topic"}
@@ -1676,7 +1676,7 @@ Expected: PASS.
 - [ ] **Step 10: Commit**
 
 ```bash
-git add src/agentic_jev_rag/system1 src/agentic_jev_rag/evals/system1.py src/agentic_jev_rag/rag/models.py tests/rag_scripts.py tests/test_system1.py tests/test_evals.py evals/data/turn_check.jsonl
+git add src/agentic_recruiter/system1 src/agentic_recruiter/evals/system1.py src/agentic_recruiter/rag/models.py tests/rag_scripts.py tests/test_system1.py tests/test_evals.py evals/data/turn_check.jsonl
 git commit -m "Turn check: a fifth System 1 decision (intelligibility, injection, depth) with a 60-example Labelled set
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -1687,11 +1687,11 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 7: Turn check in the interview graph: reprompt and redirect
 
 **Files:**
-- Modify: `src/agentic_jev_rag/recruiter/schemas.py`
-- Modify: `src/agentic_jev_rag/recruiter/interviewer.py`
-- Modify: `src/agentic_jev_rag/recruiter/interview_graph.py`
-- Modify: `src/agentic_jev_rag/recruiter/api_models.py`
-- Modify: `src/agentic_jev_rag/recruiter/api.py` (`_state`)
+- Modify: `src/agentic_recruiter/recruiter/schemas.py`
+- Modify: `src/agentic_recruiter/recruiter/interviewer.py`
+- Modify: `src/agentic_recruiter/recruiter/interview_graph.py`
+- Modify: `src/agentic_recruiter/recruiter/api_models.py`
+- Modify: `src/agentic_recruiter/recruiter/api.py` (`_state`)
 - Modify: `tests/interview_scripts.py`
 - Modify: `CONTEXT.md`
 - Test: `tests/test_interview_graph.py`, `tests/test_recruiter_api.py`
@@ -1815,9 +1815,9 @@ def test_a_failed_turn_check_is_a_502_and_replying_again_continues_without_dupli
 Run: `uv run pytest tests/test_interview_graph.py tests/test_recruiter_api.py -v`
 Expected: FAIL (no `kind` in the interrupt payload; `InterviewTurn` has no `check`; no `question_kind` in the API response).
 
-- [ ] **Step 5: Extend the schemas** (`src/agentic_jev_rag/recruiter/schemas.py`)
+- [ ] **Step 5: Extend the schemas** (`src/agentic_recruiter/recruiter/schemas.py`)
 
-Add `from agentic_jev_rag.rag.models import TraceOut` to the imports. Replace `InterviewTurn` and add `RedFlag` after it:
+Add `from agentic_recruiter.rag.models import TraceOut` to the imports. Replace `InterviewTurn` and add `RedFlag` after it:
 
 ```python
 class InterviewTurn(BaseModel):
@@ -1860,7 +1860,7 @@ Add to `InterviewAssessment`, after `summary`:
     )
 ```
 
-- [ ] **Step 6: Update the Interviewer** (`src/agentic_jev_rag/recruiter/interviewer.py`)
+- [ ] **Step 6: Update the Interviewer** (`src/agentic_recruiter/recruiter/interviewer.py`)
 
 `next_question` gains `*, asked: int | None = None`; first line of the body: `asked = len(turns) if asked is None else asked`; use `asked` instead of `len(turns)` for the limit check and in `Questions asked: {asked} of at most {max_questions}`. Change `if answer["done"] and turns:` to `if answer["done"] and asked:`.
 
@@ -1872,7 +1872,7 @@ Add to `InterviewAssessment`, after `summary`:
         ),
 ```
 
-- [ ] **Step 7: Route on the Turn check** (`src/agentic_jev_rag/recruiter/interview_graph.py`)
+- [ ] **Step 7: Route on the Turn check** (`src/agentic_recruiter/recruiter/interview_graph.py`)
 
 Replace the module docstring, the state and `build_interview_graph` with:
 
@@ -1890,10 +1890,10 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
-from agentic_jev_rag.rag.models import TraceOut
-from agentic_jev_rag.recruiter import interviewer
-from agentic_jev_rag.recruiter.context import RecruiterContext
-from agentic_jev_rag.recruiter.schemas import InterviewAssessment, InterviewTurn, RedFlag
+from agentic_recruiter.rag.models import TraceOut
+from agentic_recruiter.recruiter import interviewer
+from agentic_recruiter.recruiter.context import RecruiterContext
+from agentic_recruiter.recruiter.schemas import InterviewAssessment, InterviewTurn, RedFlag
 
 UNUSABLE = ("unintelligible", "off_topic", "injection")
 
@@ -2027,7 +2027,7 @@ Expected: PASS.
 - [ ] **Step 11: Commit**
 
 ```bash
-git add src/agentic_jev_rag/recruiter tests/interview_scripts.py tests/test_interview_graph.py tests/test_recruiter_api.py CONTEXT.md
+git add src/agentic_recruiter/recruiter tests/interview_scripts.py tests/test_interview_graph.py tests/test_recruiter_api.py CONTEXT.md
 git commit -m "Turn check in the interview graph: reprompt, redirect and flag injections without a System 2 call
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -2040,10 +2040,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 8: Forensic probes
 
 **Files:**
-- Modify: `src/agentic_jev_rag/recruiter/interviewer.py`
-- Modify: `src/agentic_jev_rag/recruiter/interview_graph.py`
-- Modify: `src/agentic_jev_rag/recruiter/graph.py` (simulated interviews)
-- Modify: `src/agentic_jev_rag/recruiter/schemas.py`
+- Modify: `src/agentic_recruiter/recruiter/interviewer.py`
+- Modify: `src/agentic_recruiter/recruiter/interview_graph.py`
+- Modify: `src/agentic_recruiter/recruiter/graph.py` (simulated interviews)
+- Modify: `src/agentic_recruiter/recruiter/schemas.py`
 - Modify: `corpus/policies/interview-guide.md`, `tests/fixtures/corpus/policies/interview-guide.md`
 - Modify: `tests/interview_scripts.py`, `tests/test_recruiter_api.py`, `tests/test_agents.py`
 - Modify: `CONTEXT.md`
@@ -2116,7 +2116,7 @@ def test_a_probe_answered_with_specifics_is_sustained_and_moves_on(recruiter_con
 Run: `uv run pytest tests/test_interview_graph.py -v`
 Expected: FAIL (the shallow answer goes straight to the next question).
 
-- [ ] **Step 4: Schemas** (`src/agentic_jev_rag/recruiter/schemas.py`)
+- [ ] **Step 4: Schemas** (`src/agentic_recruiter/recruiter/schemas.py`)
 
 Add to `InterviewTurn`, after `kind`:
 
@@ -2133,7 +2133,7 @@ Add to `InterviewAssessment`, after `red_flags`:
     )
 ```
 
-- [ ] **Step 5: Interviewer** (`src/agentic_jev_rag/recruiter/interviewer.py`)
+- [ ] **Step 5: Interviewer** (`src/agentic_recruiter/recruiter/interviewer.py`)
 
 Add `competency` to `QUESTION_SCHEMA` (`"competency": {"type": "string"}` in `properties` and in `required`), and add:
 
@@ -2185,7 +2185,7 @@ def _probe(answer: dict) -> dict:
 
 Change `_transcript` to mark probes: `"\n".join(f"Q{n}{' (follow-up)' if t.kind == 'probe' else ''}: {t.question}\nA{n}: {t.answer}" for n, t in enumerate(turns, start=1))`.
 
-In `src/agentic_jev_rag/recruiter/graph.py`'s simulated loop:
+In `src/agentic_recruiter/recruiter/graph.py`'s simulated loop:
 
 ```python
             while (question := interviewer.next_question(ctx, briefing.text, turns)) is not None:
@@ -2195,7 +2195,7 @@ In `src/agentic_jev_rag/recruiter/graph.py`'s simulated loop:
 
 In `tests/test_agents.py`, build turns from `q.text`: `turns_so_far.append(InterviewTurn(question=q.text, answer=interviewer.simulated_answer(ctx, candidate, q.text)))`.
 
-- [ ] **Step 6: Graph** (`src/agentic_jev_rag/recruiter/interview_graph.py`)
+- [ ] **Step 6: Graph** (`src/agentic_recruiter/recruiter/interview_graph.py`)
 
 Add to the state: `competency: str  # of the pending question` and `probes: int  # probes asked on the current topic`. Update the docstring's second paragraph to add: "Shallow answers get up to `max_probes_per_topic` forensic follow-ups, which do not count as topics."
 
@@ -2252,7 +2252,7 @@ Expected: PASS.
 - [ ] **Step 10: Commit**
 
 ```bash
-git add src/agentic_jev_rag/recruiter corpus/policies/interview-guide.md tests CONTEXT.md
+git add src/agentic_recruiter/recruiter corpus/policies/interview-guide.md tests CONTEXT.md
 git commit -m "Forensic probes: up to two follow-ups on shallow answers, sustained probes per competency
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -2267,7 +2267,7 @@ After merging, re-index the corpus so the Interview Guide change reaches the RAG
 ### Task 9: The Interview signals System 1 decision
 
 **Files:**
-- Modify: `src/agentic_jev_rag/system1/types.py`, `prompts.py`, `llm.py`, `jev.py`, `__init__.py`
+- Modify: `src/agentic_recruiter/system1/types.py`, `prompts.py`, `llm.py`, `jev.py`, `__init__.py`
 - Modify: `tests/rag_scripts.py`
 - Test: `tests/test_system1.py`
 
@@ -2279,7 +2279,7 @@ After merging, re-index the corpus so the Interview Guide change reaches the RAG
 - [ ] **Step 1: Write the failing tests** (append to `tests/test_system1.py`)
 
 ```python
-from agentic_jev_rag.system1.prompts import SIGNALS_CONSISTENCY_CRITERIA
+from agentic_recruiter.system1.prompts import SIGNALS_CONSISTENCY_CRITERIA
 
 COMPETENCIES = ["Technical operations", "Problem solving", "Project delivery"]
 
@@ -2427,7 +2427,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/agentic_jev_rag/system1 tests/rag_scripts.py tests/test_system1.py
+git add src/agentic_recruiter/system1 tests/rag_scripts.py tests/test_system1.py
 git commit -m "Interview signals: evidence per competency and Dossier consistency as a System 1 decision
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -2438,8 +2438,8 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 10: Observe in parallel with the next question; contradictions become red flags
 
 **Files:**
-- Modify: `src/agentic_jev_rag/recruiter/interview_graph.py`
-- Modify: `src/agentic_jev_rag/recruiter/interviewer.py`
+- Modify: `src/agentic_recruiter/recruiter/interview_graph.py`
+- Modify: `src/agentic_recruiter/recruiter/interviewer.py`
 - Modify: `CONTEXT.md`
 - Test: `tests/test_interview_graph.py`
 
@@ -2516,7 +2516,7 @@ Add `thread` and `interview_question`, `ASSESSMENT` to this file's import from `
 Run: `uv run pytest tests/test_interview_graph.py -v`
 Expected: FAIL with `KeyError: 'signals'` (first test) and missing red flags (second).
 
-- [ ] **Step 3: Add `observe` and the fan-in** (`src/agentic_jev_rag/recruiter/interview_graph.py`)
+- [ ] **Step 3: Add `observe` and the fan-in** (`src/agentic_recruiter/recruiter/interview_graph.py`)
 
 Add `signals: list[dict]  # Interview signals per scored answer` to the state. Add to the docstring: "Interview signals for each scored answer run in the same superstep as the next question or probe, so they cost no latency."
 
@@ -2557,7 +2557,7 @@ Add `signals: list[dict]  # Interview signals per scored answer` to the state. A
 
 (`brief → ask → route_next` also works at the start: `observe` simply does not run then.) If the parallel test fails because LangGraph ran `ask` and `observe` one after the other, stop and report it: do not replace the graph branches with threads without your human partner's approval.
 
-- [ ] **Step 4: Use signals and confirm contradictions in `assess`** (`src/agentic_jev_rag/recruiter/interviewer.py`)
+- [ ] **Step 4: Use signals and confirm contradictions in `assess`** (`src/agentic_recruiter/recruiter/interviewer.py`)
 
 Add to `ASSESSMENT_SCHEMA["properties"]` and `required`:
 
@@ -2627,7 +2627,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/agentic_jev_rag/recruiter tests/test_interview_graph.py CONTEXT.md
+git add src/agentic_recruiter/recruiter tests/test_interview_graph.py CONTEXT.md
 git commit -m "Observe in parallel with the next question; confirmed Dossier contradictions become red flags
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -2640,8 +2640,8 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 11: Cover letters and LinkedIn profiles in the Dossier
 
 **Files:**
-- Create: `src/agentic_jev_rag/corpus/dossier.py`
-- Modify: `src/agentic_jev_rag/recruiter/interviewer.py` (`dossier_text`)
+- Create: `src/agentic_recruiter/corpus/dossier.py`
+- Modify: `src/agentic_recruiter/recruiter/interviewer.py` (`dossier_text`)
 - Modify: `tests/fixtures/corpus/candidates.jsonl` (C-001 only)
 - Modify: `corpus/candidates.jsonl` (C-0040 and C-0150, generated)
 - Modify: `CONTEXT.md`
@@ -2658,9 +2658,9 @@ Append to `tests/test_corpus.py`:
 ```python
 import json as _json
 
-from agentic_jev_rag.corpus.documents import Document, load_corpus, write_jsonl
-from agentic_jev_rag.corpus.dossier import add_dossiers
-from agentic_jev_rag.gateway import FakeModelGateway
+from agentic_recruiter.corpus.documents import Document, load_corpus, write_jsonl
+from agentic_recruiter.corpus.dossier import add_dossiers
+from agentic_recruiter.gateway import FakeModelGateway
 
 DOSSIER = {
     "cover_letter": "I am applying for the Linux role.",
@@ -2703,7 +2703,7 @@ def test_the_dossier_text_has_the_cv_cover_letter_and_linkedin(recruiter_context
 - [ ] **Step 2: Run them to verify they fail**
 
 Run: `uv run pytest tests/test_corpus.py tests/test_interview_graph.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'agentic_jev_rag.corpus.dossier'`.
+Expected: FAIL with `ModuleNotFoundError: No module named 'agentic_recruiter.corpus.dossier'`.
 
 - [ ] **Step 3: Add a Dossier to the fixture Candidate C-001**
 
@@ -2737,7 +2737,7 @@ EOF
 ```python
 """Synthetic Dossier sections for demo Candidates: a cover letter and a LinkedIn profile consistent with the CV.
 
-Run: uv run python -m agentic_jev_rag.corpus.dossier C-0040 C-0150 --discrepancy C-0150
+Run: uv run python -m agentic_recruiter.corpus.dossier C-0040 C-0150 --discrepancy C-0150
 then re-index: docker compose --profile setup run --rm ingest
 """
 
@@ -2746,8 +2746,8 @@ import json
 from dataclasses import replace
 from pathlib import Path
 
-from agentic_jev_rag.corpus.documents import Document, write_jsonl
-from agentic_jev_rag.gateway import ModelGateway
+from agentic_recruiter.corpus.documents import Document, write_jsonl
+from agentic_recruiter.gateway import ModelGateway
 
 DOSSIER_SCHEMA = {
     "type": "object",
@@ -2811,8 +2811,8 @@ def main() -> None:
     parser.add_argument("--path", type=Path, default=Path("corpus") / "candidates.jsonl")
     args = parser.parse_args()
 
-    from agentic_jev_rag.config import load_config
-    from agentic_jev_rag.openrouter import OpenRouterGateway
+    from agentic_recruiter.config import load_config
+    from agentic_recruiter.openrouter import OpenRouterGateway
 
     add_dossiers(args.path, args.ids, OpenRouterGateway.from_env(), load_config().models.system_2_model, discrepancy_ids=args.discrepancy)
 
@@ -2821,7 +2821,7 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 5: Render the whole Dossier** (`src/agentic_jev_rag/recruiter/interviewer.py`)
+- [ ] **Step 5: Render the whole Dossier** (`src/agentic_recruiter/recruiter/interviewer.py`)
 
 ```python
 def dossier_text(candidate: dict) -> str:
@@ -2843,21 +2843,21 @@ Expected: PASS (the fixture corpus is re-indexed per session, with the Dossier i
 
 - [ ] **Step 7: Generate the demo Dossiers (live, about $0.05)**
 
-Run: `uv run python -m agentic_jev_rag.corpus.dossier C-0040 C-0150 --discrepancy C-0150`
+Run: `uv run python -m agentic_recruiter.corpus.dossier C-0040 C-0150 --discrepancy C-0150`
 Then: `git diff --stat corpus/candidates.jsonl` (exactly 2 lines changed) and read both Dossiers: C-0040's must be consistent with its CV; C-0150's LinkedIn must have the two discrepancies. Re-generate if not. Re-index: `docker compose --profile setup run --rm ingest`.
 
 - [ ] **Step 8: Add Dossier to `CONTEXT.md`** (Corpus section, after **Candidate**)
 
 ```markdown
 **Dossier**:
-Everything SwiftAI holds about a Candidate that an interview can draw on: the CV and, when present, a cover letter and a LinkedIn profile (synthetic, for demo Candidates).
+Everything the agency holds about a Candidate that an interview can draw on: the CV and, when present, a cover letter and a LinkedIn profile (synthetic, for demo Candidates).
 _Avoid_: file, record
 ```
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add src/agentic_jev_rag/corpus/dossier.py src/agentic_jev_rag/recruiter/interviewer.py tests corpus/candidates.jsonl CONTEXT.md
+git add src/agentic_recruiter/corpus/dossier.py src/agentic_recruiter/recruiter/interviewer.py tests corpus/candidates.jsonl CONTEXT.md
 git commit -m "Dossier: synthetic cover letters and LinkedIn profiles for demo Candidates, read by the interview
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -2870,11 +2870,11 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 12: Timing in the API, advisory integrity signals, and the Compliance integrity check
 
 **Files:**
-- Create: `src/agentic_jev_rag/recruiter/integrity.py`
-- Modify: `src/agentic_jev_rag/recruiter/schemas.py`
-- Modify: `src/agentic_jev_rag/recruiter/interview_graph.py`
-- Modify: `src/agentic_jev_rag/recruiter/api_models.py`, `api.py`
-- Modify: `src/agentic_jev_rag/recruiter/compliance.py`
+- Create: `src/agentic_recruiter/recruiter/integrity.py`
+- Modify: `src/agentic_recruiter/recruiter/schemas.py`
+- Modify: `src/agentic_recruiter/recruiter/interview_graph.py`
+- Modify: `src/agentic_recruiter/recruiter/api_models.py`, `api.py`
+- Modify: `src/agentic_recruiter/recruiter/compliance.py`
 - Test: `tests/test_integrity.py`, `tests/test_recruiter_api.py`
 
 **Interfaces:**
@@ -2888,9 +2888,9 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```python
 """Integrity signals are advisory observations for a human; the Compliance check keeps them out of the scores."""
 
-from agentic_jev_rag.recruiter import compliance
-from agentic_jev_rag.recruiter.integrity import integrity_signals
-from agentic_jev_rag.recruiter.schemas import INTEGRITY_NOTE, CompetencyScore, InterviewAssessment, InterviewTurn, TurnTiming
+from agentic_recruiter.recruiter import compliance
+from agentic_recruiter.recruiter.integrity import integrity_signals
+from agentic_recruiter.recruiter.schemas import INTEGRITY_NOTE, CompetencyScore, InterviewAssessment, InterviewTurn, TurnTiming
 
 
 def turn(**timing):
@@ -2960,7 +2960,7 @@ def test_reply_timing_is_kept_per_turn_reported_as_advisory_and_never_shown_to_t
 Run: `uv run pytest tests/test_integrity.py tests/test_recruiter_api.py -v`
 Expected: FAIL with `ImportError: cannot import name 'TurnTiming'`.
 
-- [ ] **Step 4: Schemas** (`src/agentic_jev_rag/recruiter/schemas.py`)
+- [ ] **Step 4: Schemas** (`src/agentic_recruiter/recruiter/schemas.py`)
 
 Add before `InterviewTurn`:
 
@@ -3012,7 +3012,7 @@ Add to `InterviewAssessment`, after `probes_sustained`:
 
 Change `ComplianceFinding.check` to `Literal["input_guardrail", "consent", "groundedness", "policy", "integrity"]` and append to its description: " `integrity`: that no delivery timing was cited in an interview's scores or recommendation."
 
-- [ ] **Step 5: Integrity observations** (`src/agentic_jev_rag/recruiter/integrity.py`)
+- [ ] **Step 5: Integrity observations** (`src/agentic_recruiter/recruiter/integrity.py`)
 
 ```python
 """Integrity signals: delivery timings of spoken answers, with advisory observations for a human (ADR 0013).
@@ -3020,7 +3020,7 @@ Change `ComplianceFinding.check` to `Literal["input_guardrail", "consent", "grou
 They are computed here, after the assessment, from the turns' timing. The assessment prompt never sees them.
 """
 
-from agentic_jev_rag.recruiter.schemas import IntegritySignals, InterviewTurn, TurnIntegrity
+from agentic_recruiter.recruiter.schemas import IntegritySignals, InterviewTurn, TurnIntegrity
 
 LONG_PAUSE_S = 8.0
 FAST_WPM = 170.0
@@ -3043,7 +3043,7 @@ def integrity_signals(turns: list[InterviewTurn]) -> IntegritySignals:
     return IntegritySignals(turns=entries)
 ```
 
-- [ ] **Step 6: Compliance integrity check** (`src/agentic_jev_rag/recruiter/compliance.py`)
+- [ ] **Step 6: Compliance integrity check** (`src/agentic_recruiter/recruiter/compliance.py`)
 
 Add `import re`, import `InterviewAssessment`, and update the module docstring to mention the integrity check. Add:
 
@@ -3134,7 +3134,7 @@ Expected: PASS (including `tests/test_recruiter_api_docs.py`: every new field is
 - [ ] **Step 9: Commit**
 
 ```bash
-git add src/agentic_jev_rag/recruiter tests/test_integrity.py tests/test_recruiter_api.py
+git add src/agentic_recruiter/recruiter tests/test_integrity.py tests/test_recruiter_api.py
 git commit -m "Timing per spoken answer, advisory integrity signals, and a Compliance check that keeps them out of scores
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -3145,10 +3145,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 13: The worker measures timing
 
 **Files:**
-- Create: `src/agentic_jev_rag/voice/timing.py`
-- Modify: `src/agentic_jev_rag/voice/interview.py`
-- Modify: `src/agentic_jev_rag/voice/__main__.py`
-- Modify: `src/agentic_jev_rag/voice/script.py` (`summary_text`)
+- Create: `src/agentic_recruiter/voice/timing.py`
+- Modify: `src/agentic_recruiter/voice/interview.py`
+- Modify: `src/agentic_recruiter/voice/__main__.py`
+- Modify: `src/agentic_recruiter/voice/script.py` (`summary_text`)
 - Test: `tests/test_voice_timing.py`, `tests/test_voice_interview.py`, `tests/test_voice_script.py`
 
 **Interfaces:**
@@ -3160,7 +3160,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```python
 """Timing of one spoken answer, from LiveKit agent and user state changes."""
 
-from agentic_jev_rag.voice.timing import TurnTimer, count_fillers
+from agentic_recruiter.voice.timing import TurnTimer, count_fillers
 
 
 class Clock:
@@ -3212,7 +3212,7 @@ def test_fillers_are_whole_words_only():
 Run: `uv run pytest tests/test_voice_timing.py -v`
 Expected: FAIL with `ModuleNotFoundError`.
 
-- [ ] **Step 3: Implement the timer** (`src/agentic_jev_rag/voice/timing.py`)
+- [ ] **Step 3: Implement the timer** (`src/agentic_recruiter/voice/timing.py`)
 
 ```python
 """Delivery timing of one spoken answer, from the session's agent and user state changes (advisory only, ADR 0013)."""
@@ -3310,7 +3310,7 @@ and pass `timing` through `_reply(answer, timing)` to both `self.client.reply(se
 
 Run: `uv run pytest tests/test_voice_interview.py -v` — Expected: PASS.
 
-- [ ] **Step 5: Wire the session events** (`src/agentic_jev_rag/voice/__main__.py`)
+- [ ] **Step 5: Wire the session events** (`src/agentic_recruiter/voice/__main__.py`)
 
 Extend `on_agent_state` and add a user-state handler:
 
@@ -3354,7 +3354,7 @@ Run: `uv run pytest` — Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/agentic_jev_rag/voice tests/test_voice_timing.py tests/test_voice_interview.py tests/test_voice_script.py
+git add src/agentic_recruiter/voice tests/test_voice_timing.py tests/test_voice_interview.py tests/test_voice_script.py
 git commit -m "The voice worker measures each answer's timing and sends it with the reply
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -3375,7 +3375,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```python
 def test_a_live_interview_reprompts_redirects_and_probes_on_jev(gateway, service):
     """Through the Recruiter app with real models and Jev: gibberish, an injection, a vague answer, a real one."""
-    from agentic_jev_rag.recruiter.api import create_recruiter_app
+    from agentic_recruiter.recruiter.api import create_recruiter_app
 
     rag = RagClient("http://rag", http=TestClient(create_rag_app(service)))
     ctx = RecruiterContext(config=CONFIG, gateway=gateway, rag=rag, system_1="jev")
@@ -3399,7 +3399,7 @@ Expected: PASS. If a Turn check outcome differs (for example the vague answer is
 
 - [ ] **Step 2: Run the System 1 comparison with the Turn check (live, about $0.10)**
 
-Run: `uv run python -m agentic_jev_rag.evals.system1 --out results/system1-$(date +%Y-%m-%d)`
+Run: `uv run python -m agentic_recruiter.evals.system1 --out results/system1-$(date +%Y-%m-%d)`
 Expected: the summary includes `turn_check` rows for `llm` and `jev`, and the "Turn check errors that matter most" lines. Commit the results directory.
 
 - [ ] **Step 3: Write ADR 0013** (`docs/adr/0013-integrity-signals-are-advisory.md`)
@@ -3409,7 +3409,7 @@ Expected: the summary includes `turn_check` rows for `llm` and `jev`, and the "T
 
 A voice interview measures how each answer was delivered: the pause before it, its duration, speaking rate and filler words. A long pause before a polished, filler-free answer can mean a candidate is reading a generated answer, which is why AI interviewers watch it. It is also how many non-native speakers, disabled and neurodivergent candidates, and careful thinkers answer.
 
-So these timings are **integrity signals**: reported per answer, with an observation when the pattern appears, for a human recruiter to follow up. They never reach the assessment prompt, a score, the recommendation or the red flags. The timings are added to the assessment after it is written, and a Compliance check (`integrity`) fails if a score rationale or the summary cites delivery timing. This follows SwiftAI's Fair Hiring and AI Act human-oversight policies: an automated signal with known disparate impact informs a human; it does not decide.
+So these timings are **integrity signals**: reported per answer, with an observation when the pattern appears, for a human recruiter to follow up. They never reach the assessment prompt, a score, the recommendation or the red flags. The timings are added to the assessment after it is written, and a Compliance check (`integrity`) fails if a score rationale or the summary cites delivery timing. This follows the agency's Fair Hiring and AI Act human-oversight policies: an automated signal with known disparate impact informs a human; it does not decide.
 ```
 
 - [ ] **Step 4: Add Integrity signal to `CONTEXT.md`** (Agents section, after **Voice host**)

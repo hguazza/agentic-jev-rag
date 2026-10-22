@@ -1,7 +1,7 @@
 """Structure-aware chunking: sections of CVs, Jobs and Policies become chunks."""
 
-from agentic_jev_rag.corpus.documents import Document
-from agentic_jev_rag.rag.chunking import chunk_document
+from agentic_recruiter.corpus.documents import Document
+from agentic_recruiter.rag.chunking import chunk_document
 
 CV = Document(
     "C-1",

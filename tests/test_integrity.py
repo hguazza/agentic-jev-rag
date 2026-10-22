@@ -1,8 +1,8 @@
 """Integrity signals are advisory observations for a human; the Compliance check keeps them out of the scores."""
 
-from agentic_jev_rag.recruiter import compliance
-from agentic_jev_rag.recruiter.integrity import integrity_signals
-from agentic_jev_rag.recruiter.schemas import INTEGRITY_NOTE, CompetencyScore, InterviewAssessment, InterviewTurn, TurnTiming
+from agentic_recruiter.recruiter import compliance
+from agentic_recruiter.recruiter.integrity import integrity_signals
+from agentic_recruiter.recruiter.schemas import INTEGRITY_NOTE, CompetencyScore, InterviewAssessment, InterviewTurn, TurnTiming
 
 
 def turn(**timing):

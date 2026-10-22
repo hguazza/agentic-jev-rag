@@ -4,7 +4,7 @@ import uuid
 import pytest
 from qdrant_client import QdrantClient
 
-from agentic_jev_rag.config import Config, ModelConfig
+from agentic_recruiter.config import Config, ModelConfig
 
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
 
@@ -43,7 +43,7 @@ FIXTURE_CORPUS = __import__("pathlib").Path(__file__).parent / "fixtures" / "cor
 
 @pytest.fixture(scope="session")
 def fixture_documents():
-    from agentic_jev_rag.corpus.documents import load_corpus
+    from agentic_recruiter.corpus.documents import load_corpus
 
     return load_corpus(FIXTURE_CORPUS)
 
@@ -51,8 +51,8 @@ def fixture_documents():
 @pytest.fixture(scope="session")
 def indexed(config, qdrant, fixture_documents):
     """The fixture corpus indexed once per session with the fake gateway's embeddings."""
-    from agentic_jev_rag.gateway import FakeModelGateway
-    from agentic_jev_rag.rag.index import index_corpus
+    from agentic_recruiter.gateway import FakeModelGateway
+    from agentic_recruiter.rag.index import index_corpus
 
     return index_corpus(fixture_documents, config, FakeModelGateway(), qdrant)
 
@@ -65,10 +65,10 @@ def recruiter_context(indexed, config, qdrant, fixture_documents):
     """Builds a RecruiterContext whose RAG API runs in-process over the indexed fixture corpus."""
     from fastapi.testclient import TestClient
 
-    from agentic_jev_rag.rag.api import create_rag_app
-    from agentic_jev_rag.rag.service import RagService
-    from agentic_jev_rag.recruiter.context import RecruiterContext
-    from agentic_jev_rag.recruiter.rag_client import RagClient
+    from agentic_recruiter.rag.api import create_rag_app
+    from agentic_recruiter.rag.service import RagService
+    from agentic_recruiter.recruiter.context import RecruiterContext
+    from agentic_recruiter.recruiter.rag_client import RagClient
     from tests.rag_scripts import scripted_gateway
 
     def make(gateway, *, rag_gateway=None, system_1="llm"):
