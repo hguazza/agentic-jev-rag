@@ -8,8 +8,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from agentic_jev_rag.corpus.documents import Document
-from agentic_jev_rag.recruiter.interviewer import ModelOutputError
-from agentic_jev_rag.system1 import System1Decider, System1TraceEntry
+from agentic_jev_rag.gateway import CostMeter
+from agentic_jev_rag.openrouter import OpenRouterError
+from agentic_jev_rag.recruiter.interviewer import ModelOutputError, dossier_text
+from agentic_jev_rag.recruiter.schemas import INTEGRITY_NOTE
+from agentic_jev_rag.system1 import System1Decider, System1Error, System1TraceEntry
 
 OUT_DIR = Path("results") / "ai-engineer-showcase"
 FOLDED_KINDS = ("reprompt", "redirect")  # these repeat the previous question
@@ -173,3 +176,115 @@ def _debrief(answer: dict) -> dict:
     if not all(isinstance(fact, str) for fact in answer["facts_used"]):
         raise ValueError("`facts_used` must be a list of strings")
     return {key: answer[key] for key in DEBRIEF_SCHEMA["required"]}
+
+
+HABITS_TASK = (
+    "Coach the candidate on delivery across the whole interview. Give at most three habits to fix, most costly first, "
+    "each with the question numbers that show it and one concrete fix. Then, for every red flag, in the same order, "
+    "say what the candidate should say instead, using only what the CV and Dossier support. "
+    f"Timing never affected the score: {INTEGRITY_NOTE} Use it only to coach delivery."
+)
+HABITS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "habits": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"habit": {"type": "string"}, "turns": {"type": "array", "items": {"type": "integer"}}, "fix": {"type": "string"}},
+                "required": ["habit", "turns", "fix"],
+                "additionalProperties": False,
+            },
+        },
+        "red_flags": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"quote": {"type": "string"}, "say_instead": {"type": "string"}},
+                "required": ["quote", "say_instead"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["habits", "red_flags"],
+    "additionalProperties": False,
+}
+MODEL_ERRORS = (OpenRouterError, ModelOutputError, System1Error)
+
+
+class CoachFailed(Exception):
+    """A model call failed mid-run. Nothing is written."""
+
+
+def delivery_habits(gateway, model: str, groups: list[QuestionGroup], red_flags: list[dict]) -> dict:
+    """Up to three delivery habits, and what to say instead for each red flag, in the red flags' order."""
+    questions = "\n".join(
+        f"Question {g.number} ({g.competency or 'opening'}), reprompted {len(g.answers) - 1} time(s): "
+        + "; ".join(f"{t.get('answer_duration_s')} s at {t.get('words_per_minute')} words per minute" for t in g.timings)
+        for g in groups
+    )
+    flags = "\n".join(f"{n}. You said: \"{f['quote']}\". {f['detail']}" for n, f in enumerate(red_flags, start=1)) or "None."
+    prompt = f"{HABITS_TASK}\n\nAnswers, with their timing:\n{questions}\n\nRed flags, in order:\n{flags}"
+
+    def build(answer: dict) -> dict:
+        if len(answer["habits"]) > 3:
+            raise ValueError(f"at most three habits, got {len(answer['habits'])}")
+        if len(answer["red_flags"]) != len(red_flags):
+            raise ValueError(f"one say_instead per red flag: expected {len(red_flags)}, got {len(answer['red_flags'])}")
+        if not all(isinstance(t, int) for h in answer["habits"] for t in h["turns"]):
+            raise ValueError("habit turns must be question numbers")
+        return {"habits": answer["habits"], "red_flags": answer["red_flags"]}
+
+    return _structured(gateway, model, prompt, "delivery_habits", HABITS_SCHEMA, build)
+
+
+@dataclass
+class Coaching:
+    interview_id: str
+    candidate_id: str
+    job_id: str
+    recommendation: str
+    scores: list[dict]
+    summary: str
+    habits: list[dict]
+    red_flags: list[dict]  # the assessment's red flags, each with "say_instead"
+    debriefs: list[Debrief]
+    system_1: str
+    cost_usd: float
+    trace: list[dict]  # System 1 decisions
+
+
+def coach(gateway, model: str, decider: System1Decider, interview: dict, candidate: dict, scorecards: str) -> Coaching:
+    """Coach one finished interview. Raises CoachRefused before any model call, CoachFailed if a model call fails."""
+    check_interview(interview)
+    assessment = interview["assessment"]
+    groups = group_turns(assessment["turns"])
+    meter = CostMeter(gateway)  # System 2 calls; System 1 costs come from the trace
+    base = dict(
+        interview_id=interview["interview_id"], candidate_id=interview["candidate_id"], job_id=interview["job_id"],
+        recommendation=assessment["recommendation"], scores=assessment["scores"], summary=assessment["summary"], system_1=decider.name,
+    )
+    if not groups:
+        return Coaching(**base, habits=[], red_flags=[], debriefs=[], cost_usd=0.0, trace=[])
+    dossier = dossier_text(candidate)
+    scorecard = scorecard_section(scorecards, candidate["metadata"].get("occupation"))
+    red_flags = assessment.get("red_flags", [])
+    debriefs, trace = [], []
+    for group in groups:
+        try:
+            debrief, checks = debrief_question(
+                meter, model, decider, group, dossier=dossier, scorecard=scorecard, scores=assessment["scores"], red_flags=red_flags
+            )
+        except MODEL_ERRORS as error:
+            raise CoachFailed(f"question {group.number}: {error}") from error
+        debriefs.append(debrief)
+        trace.extend(checks)
+    try:
+        delivery = delivery_habits(meter, model, groups, red_flags)
+    except MODEL_ERRORS as error:
+        raise CoachFailed(f"delivery habits: {error}") from error
+    flags = [flag | {"say_instead": fix["say_instead"]} for flag, fix in zip(red_flags, delivery["red_flags"])]
+    return Coaching(
+        **base, habits=delivery["habits"], red_flags=flags, debriefs=debriefs,
+        cost_usd=meter.cost_usd + sum(t.cost_usd for t in trace), trace=[asdict(t) for t in trace],
+    )

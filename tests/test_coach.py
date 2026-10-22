@@ -4,10 +4,23 @@ import json
 
 import pytest
 
-from agentic_jev_rag.coach import CoachRefused, QuestionGroup, check_interview, debrief_question, find_candidate, group_turns, scorecard_section
+from agentic_jev_rag.coach import (
+    CoachFailed,
+    CoachRefused,
+    QuestionGroup,
+    check_interview,
+    coach,
+    debrief_question,
+    delivery_habits,
+    find_candidate,
+    group_turns,
+    scorecard_section,
+)
 from agentic_jev_rag.corpus.documents import Document
 from agentic_jev_rag.gateway import FakeModelGateway
+from agentic_jev_rag.openrouter import OpenRouterError
 from agentic_jev_rag.recruiter.interviewer import ModelOutputError
+from agentic_jev_rag.recruiter.schemas import INTEGRITY_NOTE
 from agentic_jev_rag.system1 import GroundednessDecision, System1TraceEntry
 
 SCORECARDS = """# Scorecards
@@ -211,3 +224,120 @@ def test_malformed_debrief_output_is_retried_once_then_raises():
         run_debrief(gateway, ScriptedDecider())
 
     assert len(gateway.calls) == 2
+
+
+def habits_reply(habits=None, flags=None):
+    return json.dumps({
+        "habits": habits if habits is not None else [{"habit": "Long answers", "turns": [1, 2], "fix": "Stop at two minutes."}],
+        "red_flags": flags if flags is not None else [{"quote": "it's in ECS", "say_instead": "Say Docker Compose, or deploy it first."}],
+    })
+
+
+def by_schema(debrief=None, habits=None):
+    """A complete_responder that answers debrief and delivery_habits calls."""
+
+    def respond(model, prompt, system, schema):
+        return (habits or habits_reply)() if schema[0] == "delivery_habits" else (debrief or debrief_reply)()
+
+    return respond
+
+
+def interview(turns=None, red_flags=RED_FLAGS):
+    return {
+        "interview_id": "abc123", "candidate_id": "C-0213", "job_id": "J-061", "finished": True, "error": None,
+        "assessment": {
+            "turns": turns if turns is not None else [
+                turn("Tell me about yourself.", "I build agents, it's in ECS.", competency="", seconds=447.5),
+                turn("Describe a LangGraph design.", "A supervisor with workers.", seconds=111.0),
+            ],
+            "scores": SCORES, "recommendation": "next_round", "summary": "Strong agents, thin production detail.", "red_flags": red_flags,
+        },
+    }
+
+
+CANDIDATE = {"id": "C-0213", "text": "AI ENGINEER\nLangGraph agents on AWS Bedrock.", "metadata": {
+    "occupation": "ai_engineering", "dossier": {"cover_letter": "Dear micro1.", "linkedin": {"headline": "AI Engineer", "about": "Agents.", "positions": []}}}}
+
+
+def test_the_delivery_prompt_carries_timing_reprompts_red_flags_and_the_integrity_note():
+    gateway = FakeModelGateway(complete_responder=lambda *a: habits_reply())
+    groups = group_turns([
+        turn("Tell me about yourself.", "I build agents.", competency="", seconds=447.5),
+        turn("How do you evaluate?", "Pizza.", check="off_topic", seconds=30.0),
+        turn("How do you evaluate?", "Recall at k.", kind="reprompt", seconds=305.7),
+    ])
+
+    result = delivery_habits(gateway, "fake/system-2", groups, RED_FLAGS)
+
+    prompt = gateway.calls[0][2]["prompt"]
+    for expected in ("447.5", "305.7", "reprompted 1 time", "it's in ECS", INTEGRITY_NOTE, "never affected the score"):
+        assert expected in prompt
+    assert result["habits"][0]["fix"] == "Stop at two minutes."
+
+
+def test_more_than_three_habits_is_malformed_output():
+    many = [{"habit": f"h{n}", "turns": [1], "fix": "f"} for n in range(4)]
+    gateway = FakeModelGateway(complete_responder=lambda *a: habits_reply(habits=many))
+
+    with pytest.raises(ModelOutputError, match="delivery_habits"):
+        delivery_habits(gateway, "fake/system-2", group_turns(interview()["assessment"]["turns"]), RED_FLAGS)
+
+    assert len(gateway.calls) == 2
+
+
+def test_a_missing_red_flag_fix_is_malformed_output():
+    gateway = FakeModelGateway(complete_responder=lambda *a: habits_reply(flags=[]))
+
+    with pytest.raises(ModelOutputError, match="delivery_habits"):
+        delivery_habits(gateway, "fake/system-2", group_turns(interview()["assessment"]["turns"]), RED_FLAGS)
+
+
+def test_coach_debriefs_every_question_and_pairs_each_red_flag_with_what_to_say_instead():
+    gateway = FakeModelGateway(complete_responder=by_schema())
+    decider = ScriptedDecider(True, True)
+
+    coaching = coach(gateway, "fake/system-2", decider, interview(), CANDIDATE, SCORECARDS)
+
+    assert [d.question for d in coaching.debriefs] == ["Tell me about yourself.", "Describe a LangGraph design."]
+    assert coaching.red_flags == [RED_FLAGS[0] | {"say_instead": "Say Docker Compose, or deploy it first."}]
+    assert coaching.recommendation == "next_round" and coaching.system_1 == "llm"
+    assert [t["decision"] for t in coaching.trace] == ["groundedness", "groundedness"]
+    assert coaching.cost_usd == pytest.approx(0.002)  # the fake gateway's calls cost 0; each scripted check costs 0.001
+
+
+def test_a_red_flag_quoted_in_no_answer_still_gets_a_fix():
+    flag = {"kind": "contradiction", "quote": "Both the APIs are deployed", "detail": "Paraphrased by the assessor."}
+    gateway = FakeModelGateway(complete_responder=by_schema(habits=lambda: habits_reply(flags=[{"quote": flag["quote"], "say_instead": "Say Docker Compose."}])))
+
+    coaching = coach(gateway, "fake/system-2", ScriptedDecider(True, True), interview(red_flags=[flag]), CANDIDATE, SCORECARDS)
+
+    assert coaching.red_flags == [flag | {"say_instead": "Say Docker Compose."}]
+    habits_prompt = [c for c in gateway.calls if c[2]["schema"][0] == "delivery_habits"][0][2]["prompt"]
+    assert "Both the APIs are deployed" in habits_prompt
+
+
+def test_an_interview_with_nothing_to_coach_makes_no_model_call():
+    gateway = FakeModelGateway(complete_responder=by_schema())
+
+    coaching = coach(gateway, "fake/system-2", ScriptedDecider(), interview(turns=[turn("Hi?", "  ", competency="")]), CANDIDATE, SCORECARDS)
+
+    assert coaching.debriefs == [] and coaching.habits == [] and gateway.calls == []
+
+
+def test_a_system_2_failure_names_the_question_that_failed():
+    def fail_on_second(model, prompt, system, schema):
+        if "Question 2" in prompt:
+            raise OpenRouterError("HTTP 402: out of credit")
+        return debrief_reply()
+
+    with pytest.raises(CoachFailed, match="question 2: HTTP 402"):
+        coach(FakeModelGateway(complete_responder=fail_on_second), "fake/system-2", ScriptedDecider(True), interview(), CANDIDATE, SCORECARDS)
+
+
+def test_coach_refuses_an_unfinished_interview_before_any_model_call():
+    gateway = FakeModelGateway(complete_responder=by_schema())
+
+    with pytest.raises(CoachRefused):
+        coach(gateway, "fake/system-2", ScriptedDecider(), interview() | {"finished": False}, CANDIDATE, SCORECARDS)
+
+    assert gateway.calls == []
