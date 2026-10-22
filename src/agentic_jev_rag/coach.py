@@ -147,7 +147,7 @@ def debrief_question(
     data = _structured(gateway, model, prompt, "debrief", DEBRIEF_SCHEMA, _debrief)
     trace = []
     for attempt in range(2):
-        decision = decider.groundedness(data["model_answer"], data["facts_used"] + [dossier])
+        decision = decider.groundedness(data["model_answer"], [dossier])  # facts_used is the model's own claim: display only
         trace.append(decision.trace)
         if decision.grounded or attempt == 1:
             break
@@ -269,7 +269,8 @@ def coach(gateway, model: str, decider: System1Decider, interview: dict, candida
         return Coaching(**base, habits=[], red_flags=[], debriefs=[], cost_usd=0.0, trace=[])
     dossier = dossier_text(candidate)
     scorecard = scorecard_section(scorecards, candidate["metadata"].get("occupation"))
-    red_flags = assessment.get("red_flags", [])
+    # Injection flags quote text written to instruct the AI: it never reaches a prompt and is not coached.
+    red_flags = [flag for flag in assessment.get("red_flags", []) if flag.get("kind") != "injection"]
     debriefs, trace = [], []
     for group in groups:
         try:
@@ -304,7 +305,7 @@ def render(coaching: Coaching) -> str:
     if not coaching.debriefs:
         lines += ["There was no answered question to coach.", ""]
     else:
-        lines += ["## Delivery habits to fix", ""]
+        lines += ["## Delivery habits to fix", "", "Timing never affected your scores or the recommendation (ADR 0013).", ""]
         for n, habit in enumerate(coaching.habits, start=1):
             questions = ", ".join(str(t) for t in habit["turns"])
             label = "questions" if len(habit["turns"]) > 1 else "question"
@@ -329,11 +330,15 @@ def _debrief_lines(debrief: Debrief) -> list[str]:
     lines = ["", f"## Question {debrief.number}: {debrief.competency or 'Opening'}", "", f"> {debrief.question}", ""]
     lines += [f"**What it was looking for:** {debrief.looking_for}", "", "<details><summary>What you said</summary>", ""]
     lines += [f"> {answer}\n" for answer in debrief.answers] + ["</details>", "", "**What worked:**", ""]
-    lines += [f"- {p['point']}: \"{p['quote']}\"" for p in debrief.what_worked] + ["", "**What cost points:**", ""]
-    lines += [f"- {p['point']}: \"{p['quote']}\"" for p in debrief.what_cost_points] + ["", "**A tighter answer:**", "", debrief.model_answer]
+    lines += [_point(p) for p in debrief.what_worked] + ["", "**What cost points:**", ""]
+    lines += [_point(p) for p in debrief.what_cost_points] + ["", "**A tighter answer:**", "", debrief.model_answer]
     if not debrief.grounded:
         lines += ["", "*Not fully supported by your CV: check every claim before you use it.*"]
     return lines
+
+
+def _point(point: dict) -> str:
+    return f"- {point['point'].rstrip('.:; ')}: \"{point['quote']}\""
 
 
 def write_outputs(coaching: Coaching, out_dir: Path) -> None:
