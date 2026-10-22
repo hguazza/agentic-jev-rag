@@ -23,7 +23,7 @@ An open or past role at a Client, with its description, required skills, seniori
 _Avoid_: vacancy, position, req
 
 **Client**:
-A company that hires through the agency. Clients are fictional.
+A company that hires through the agency. Clients are fictional, except micro1 (J-061), the role this project targets (ADR 0014).
 
 **Interview note**:
 A record of one interview stage for a Candidate and a Job: what was asked, what was observed, the scores and the Outcome. Interview notes are synthetic.
@@ -39,6 +39,12 @@ The competencies a Job is assessed on, each rated on a fixed scale.
 
 **Consent**:
 A Candidate's permission for the agency to hold and use their Profile, valid until a recorded date. A Candidate without valid Consent must not be contacted or shortlisted.
+
+**Persona**:
+Who a synthetic showcase Candidate is: fit tier, background, speaking style and honesty. Used to write their CV and to play them as a Simulated candidate; never stored in the corpus.
+
+**Showcase**:
+The AI engineer comparison for J-061: 12 Persona Candidates and the author, ranked, screened and interviewed by the Recruiter (`results/ai-engineer-showcase/`).
 
 ### RAG service
 
@@ -95,6 +101,10 @@ _Avoid_: voice agent (for the host alone), bot
 **Integrity signal**:
 How a spoken answer was delivered (pause before it, duration, speaking rate, filler words), with an advisory observation for a human reviewer. Never used in scores or the recommendation (ADR 0013).
 _Avoid_: cheat detection, cheating score
+
+**Coach**:
+The agent that debriefs a Candidate on a finished voice interview: what each question tested, what cost points, a tighter model answer from their own CV and Dossier, and delivery habits to fix. Showcase only; never seen by a recruiter, never part of a score (ADR 0015).
+_Avoid_: feedback agent, tutor
 
 **Compliance**:
 The agent that checks the goal, the shortlist and the verdicts against Policy: fair hiring, Consent and grounded verdicts.

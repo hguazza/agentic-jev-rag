@@ -1,0 +1,10 @@
+{
+  "headline": "AI Engineer · LLM agents, RAG and evals · Python, FastAPI, LangGraph, AWS",
+  "about": "AI Engineer shipping production LLM agents in Python, FastAPI and LangGraph on AWS. I build multi-agent workflows with tool calling for a top-3 Brazilian bank on AWS Bedrock and gate every deployment on eval benchmarks. I choose models by measuring accuracy, latency and cost.",
+  "positions": [
+    {"title": "AI Engineer", "company": "Deep", "years": "2026-present"},
+    {"title": "Independent Professional, AI, Automation & Data Engineering", "company": "Freelance", "years": "2023-2025"},
+    {"title": "Data Science Intern", "company": "Facio", "years": "2023"},
+    {"title": "Commercial Analyst", "company": "Nutri Indústria e Comércio de Ração Ltda.", "years": "2021-2022"}
+  ]
+}

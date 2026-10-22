@@ -1,0 +1,111 @@
+# Personas for the AI engineer showcase (spec 2026-10-09-ai-engineer-showcase-design.md).
+# Read by corpus.ai_pool (to write each CV) and the Simulated candidate (to play each interview).
+# Never copied into the corpus: chunk payloads carry document metadata to the Screener.
+
+[[persona]]
+id = "C-0201"
+tier = "strong"
+background = "Senior LLM platform engineer at a fintech: LangGraph agents with tool calling in production, RAG over policy documents, an evaluation harness in CI, FastAPI services on AWS ECS"
+years_experience = 8
+location = "Austin, TX, US"
+speaking_style = "concise and precise"
+honesty = "truthful"
+
+[[persona]]
+id = "C-0202"
+tier = "strong"
+background = "Staff ML engineer who moved into LLM applications: built a retrieval and reranking platform on Qdrant, offline and online evaluation, Python services on AWS Lambda and EKS"
+years_experience = 11
+location = "Toronto, ON, CA"
+speaking_style = "calm and structured, thinks aloud"
+honesty = "truthful"
+
+[[persona]]
+id = "C-0203"
+tier = "strong"
+background = "AI engineer at a hiring-tech startup: voice and chat screening agents, LlamaIndex RAG, prompt optimisation with regression evals, FastAPI on AWS"
+years_experience = 5
+location = "Lisbon, LIS, PT"
+speaking_style = "energetic and fast, occasionally rambling"
+honesty = "truthful"
+
+[[persona]]
+id = "C-0204"
+tier = "gaps"
+background = "Senior Python backend engineer: FastAPI and AWS at scale, RAG only in side projects, no agents in production"
+years_experience = 9
+location = "Berlin, BE, DE"
+speaking_style = "precise, a little terse"
+honesty = "truthful"
+
+[[persona]]
+id = "C-0205"
+tier = "gaps"
+background = "ML researcher turned engineer: strong on evaluation and fine-tuning, little production backend or cloud ownership"
+years_experience = 6
+location = "Bangalore, KA, IN"
+speaking_style = "academic, long answers"
+honesty = "truthful"
+
+[[persona]]
+id = "C-0206"
+tier = "gaps"
+background = "Full-stack engineer who shipped a LangChain chatbot feature to customers; weak on evaluation and retrieval quality"
+years_experience = 4
+location = "São Paulo, SP, BR"
+speaking_style = "friendly, many fillers"
+honesty = "truthful"
+
+[[persona]]
+id = "C-0207"
+tier = "gaps"
+background = "Platform engineer on AWS who built an internal RAG search tool; light on agent design and prompt work"
+years_experience = 7
+location = "Dublin, D, IE"
+speaking_style = "matter-of-fact"
+honesty = "truthful"
+
+[[persona]]
+id = "C-0208"
+tier = "adjacent"
+background = "Data scientist: classical ML, forecasting, notebooks and dashboards; has called an LLM API in prototypes only"
+years_experience = 6
+location = "Chicago, IL, US"
+speaking_style = "careful, hedges a lot"
+honesty = "truthful"
+
+[[persona]]
+id = "C-0209"
+tier = "adjacent"
+background = "MLOps engineer: Kubernetes, model serving and feature stores for tabular models; no LLM applications"
+years_experience = 8
+location = "Warsaw, MZ, PL"
+speaking_style = "nervous, self-correcting"
+honesty = "truthful"
+
+[[persona]]
+id = "C-0210"
+tier = "adjacent"
+background = "Junior developer with a portfolio of LangChain tutorial projects; no production systems"
+years_experience = 1
+location = "Manila, NCR, PH"
+speaking_style = "eager and rambling, many fillers"
+honesty = "truthful"
+
+[[persona]]
+id = "C-0211"
+tier = "bluffer"
+background = "Claims to have led an autonomous agent platform at a startup; in truth integrated a vendor chatbot widget and wrote its prompts"
+years_experience = 6
+location = "London, LND, GB"
+speaking_style = "confident, buzzword-heavy"
+honesty = "bluffer"
+
+[[persona]]
+id = "C-0212"
+tier = "bluffer"
+background = "Claims senior RAG and evaluation expertise; in truth wrote prompt templates for a marketing content tool"
+years_experience = 5
+location = "Sydney, NSW, AU"
+speaking_style = "smooth and salesy, deflects detail"
+honesty = "bluffer"

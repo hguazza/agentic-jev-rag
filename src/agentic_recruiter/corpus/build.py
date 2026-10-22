@@ -62,7 +62,7 @@ def build_corpus(
     locations = sorted({p["location"] for p in postings})
 
     with ThreadPoolExecutor(WORKERS) as pool:
-        profiles = list(pool.map(lambda r: _profile(gateway, extraction_model, r["text"]), resumes))
+        profiles = list(pool.map(lambda r: extract_profile(gateway, extraction_model, r["text"]), resumes))
         rewritten = list(pool.map(lambda pc: _rewrite_job(gateway, system_2_model, *pc), zip(postings, clients)))
 
     candidates = [
@@ -126,7 +126,7 @@ def build_corpus(
     return candidates + jobs + notes
 
 
-def _profile(gateway: ModelGateway, model: str, text: str) -> dict:
+def extract_profile(gateway: ModelGateway, model: str, text: str) -> dict:
     prompt = (
         "Extract from this CV: a short professional headline, total years of professional experience (estimate "
         "from dates; a number), and up to 12 job-related skills. Never extract personal characteristics.\n\n"
@@ -188,6 +188,10 @@ SOURCES = """# Corpus sources
 - **interviews.jsonl**: synthetic interview notes written by the System 2 model for seeded (Candidate, Job) pairs
   and Outcomes.
 - **policies/**: hand-written policies for the fictional agency.
+- **AI engineer showcase pool** (J-061, C-0201..C-0213): J-061 is micro1's public job description, restructured
+  into the Job sections. C-0201..C-0212 are synthetic CVs and Dossiers written from `ai_pool/personas.toml` (the committed
+  pool was written in Claude Code; re-running the generator has the System 2 model write them). C-0213 is the author's
+  own CV. A rebuild drops the pool: run `uv run python -m agentic_recruiter.corpus.ai_pool`.
 
 Rebuild with `uv run python -m agentic_recruiter.corpus.build --seed {seed}` (downloads are cached in `data/raw/`).
 """

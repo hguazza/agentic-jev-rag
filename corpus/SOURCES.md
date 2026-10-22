@@ -8,5 +8,9 @@
 - **interviews.jsonl**: synthetic interview notes written by the System 2 model for seeded (Candidate, Job) pairs
   and Outcomes.
 - **policies/**: hand-written policies for the fictional agency.
+- **AI engineer showcase pool** (J-061, C-0201..C-0213): J-061 is micro1's public job description, restructured
+  into the Job sections. C-0201..C-0212 are synthetic CVs and Dossiers written from `ai_pool/personas.toml` (the committed
+  pool was written in Claude Code; re-running the generator has the System 2 model write them). C-0213 is the author's
+  own CV. A rebuild drops the pool: run `uv run python -m agentic_recruiter.corpus.ai_pool`.
 
 Rebuild with `uv run python -m agentic_recruiter.corpus.build --seed 7` (downloads are cached in `data/raw/`).

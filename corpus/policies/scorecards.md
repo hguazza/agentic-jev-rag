@@ -51,6 +51,13 @@ Each job is assessed on the competencies for its occupation, each scored from 1 
 - **Controls and compliance:** applies internal controls and regulation.
 - **Business partnering:** advises budget holders clearly.
 
+## AI engineering
+
+- **LLM systems:** agents, tool calling, prompt chains and orchestration (LangGraph, LangChain or LlamaIndex).
+- **Retrieval and evaluation:** RAG architecture, vector databases and deterministic evaluation harnesses.
+- **Production engineering:** Python and FastAPI services that are low-latency, tested and observable.
+- **Cloud delivery:** deploys, monitors and scales on AWS; ships customer-facing features fast.
+
 ## Rule for advancing
 
 A Screener advances a candidate when no competency scores 1 and the average is 3 or more. A candidate who does not meet a hard requirement in the job (for example a mandatory licence or right to work) is rejected regardless of scores.
