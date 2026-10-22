@@ -6,7 +6,9 @@ import pytest
 
 from agentic_jev_rag.coach import (
     CoachFailed,
+    Coaching,
     CoachRefused,
+    Debrief,
     QuestionGroup,
     check_interview,
     coach,
@@ -14,7 +16,9 @@ from agentic_jev_rag.coach import (
     delivery_habits,
     find_candidate,
     group_turns,
+    render,
     scorecard_section,
+    write_outputs,
 )
 from agentic_jev_rag.corpus.documents import Document
 from agentic_jev_rag.gateway import FakeModelGateway
@@ -341,3 +345,56 @@ def test_coach_refuses_an_unfinished_interview_before_any_model_call():
         coach(gateway, "fake/system-2", ScriptedDecider(), interview() | {"finished": False}, CANDIDATE, SCORECARDS)
 
     assert gateway.calls == []
+
+
+def coaching(debriefs=None, grounded=True):
+    if debriefs is None:
+        debriefs = [Debrief(
+            1, "Tell me about yourself.", "", ["I build agents, it's in ECS."], "A focused summary.",
+            [{"point": "Named LangGraph", "quote": "LangGraph"}], [{"point": "Seven minutes long", "quote": "so, basically"}],
+            "I build LangGraph agents on AWS Bedrock.", ["LangGraph agents on AWS Bedrock"], grounded,
+        )]
+    return Coaching(
+        "abc123", "C-0213", "J-061", "next_round", SCORES, "Strong agents, thin production detail.",
+        [{"habit": "Long answers", "turns": [1], "fix": "Stop at two minutes."}],
+        [RED_FLAGS[0] | {"say_instead": "Say Docker Compose, or deploy it first."}],
+        debriefs, "llm", 0.0123, [],
+    )
+
+
+def test_coaching_md_has_the_headline_habits_red_flags_and_one_section_per_question():
+    text = render(coaching())
+
+    assert text.startswith("# Interview coaching: C-0213 for J-061")
+    for expected in ("`next_round`", "LLM systems 4", "Strong agents, thin production detail.", "1. **Long answers** (question 1). Stop at two minutes.",
+                     "it's in ECS", "Say Docker Compose, or deploy it first.", "## Question 1: Opening", "> Tell me about yourself.",
+                     "A focused summary.", "Named LangGraph", "\"LangGraph\"", "Seven minutes long", "I build LangGraph agents on AWS Bedrock.",
+                     "System 1 decider: `llm`", "$0.0123", "abc123"):
+        assert expected in text
+    assert "Not fully supported" not in text
+
+
+def test_an_ungrounded_model_answer_is_marked_in_coaching_md():
+    assert "Not fully supported by your CV" in render(coaching(grounded=False))
+
+
+def test_coaching_md_says_when_there_was_nothing_to_coach():
+    assert "There was no answered question to coach." in render(coaching(debriefs=[]))
+
+
+def test_write_outputs_writes_markdown_and_json(tmp_path):
+    write_outputs(coaching(), tmp_path / "out")
+
+    assert (tmp_path / "out" / "coaching.md").read_text(encoding="utf-8") == render(coaching())
+    data = json.loads((tmp_path / "out" / "coaching.json").read_text(encoding="utf-8"))
+    assert data["debriefs"][0]["model_answer"] == "I build LangGraph agents on AWS Bedrock." and data["cost_usd"] == 0.0123
+
+
+def test_a_failed_run_writes_nothing(tmp_path):
+    def fail(model, prompt, system, schema):
+        raise OpenRouterError("HTTP 402: out of credit")
+
+    with pytest.raises(CoachFailed):
+        write_outputs(coach(FakeModelGateway(complete_responder=fail), "fake/system-2", ScriptedDecider(), interview(), CANDIDATE, SCORECARDS), tmp_path)
+
+    assert list(tmp_path.iterdir()) == []

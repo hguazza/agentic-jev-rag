@@ -3,6 +3,7 @@
 Run: uv run python -m agentic_jev_rag.coach results/voice-interviews/<id>.json [--out results/ai-engineer-showcase]
 """
 
+import argparse
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -288,3 +289,85 @@ def coach(gateway, model: str, decider: System1Decider, interview: dict, candida
         **base, habits=delivery["habits"], red_flags=flags, debriefs=debriefs,
         cost_usd=meter.cost_usd + sum(t.cost_usd for t in trace), trace=[asdict(t) for t in trace],
     )
+
+
+def render(coaching: Coaching) -> str:
+    scores = ", ".join(f"{s['competency']} {s['score']}" for s in coaching.scores)
+    lines = [
+        f"# Interview coaching: {coaching.candidate_id} for {coaching.job_id}",
+        "",
+        f"Recommendation: `{coaching.recommendation}`. Scores: {scores}.",
+        "",
+        coaching.summary,
+        "",
+    ]
+    if not coaching.debriefs:
+        lines += ["There was no answered question to coach.", ""]
+    else:
+        lines += ["## Delivery habits to fix", ""]
+        for n, habit in enumerate(coaching.habits, start=1):
+            questions = ", ".join(str(t) for t in habit["turns"])
+            label = "questions" if len(habit["turns"]) > 1 else "question"
+            lines.append(f"{n}. **{habit['habit']}** ({label} {questions}). {habit['fix']}")
+        if coaching.red_flags:
+            lines += ["", "## Red flags: what to say instead", ""]
+            for flag in coaching.red_flags:
+                lines.append(f"- You said: \"{flag['quote']}\". {flag['detail']} **Say instead:** {flag['say_instead']}")
+        for debrief in coaching.debriefs:
+            lines += _debrief_lines(debrief)
+    lines += [
+        "",
+        "---",
+        "",
+        f"System 1 decider: `{coaching.system_1}`. Cost of this run: ${coaching.cost_usd:.4f}. Interview `{coaching.interview_id}`. "
+        "This coaching is for the candidate only: it never reached a recruiter or a score.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _debrief_lines(debrief: Debrief) -> list[str]:
+    lines = ["", f"## Question {debrief.number}: {debrief.competency or 'Opening'}", "", f"> {debrief.question}", ""]
+    lines += [f"**What it was looking for:** {debrief.looking_for}", "", "<details><summary>What you said</summary>", ""]
+    lines += [f"> {answer}\n" for answer in debrief.answers] + ["</details>", "", "**What worked:**", ""]
+    lines += [f"- {p['point']}: \"{p['quote']}\"" for p in debrief.what_worked] + ["", "**What cost points:**", ""]
+    lines += [f"- {p['point']}: \"{p['quote']}\"" for p in debrief.what_cost_points] + ["", "**A tighter answer:**", "", debrief.model_answer]
+    if not debrief.grounded:
+        lines += ["", "*Not fully supported by your CV: check every claim before you use it.*"]
+    return lines
+
+
+def write_outputs(coaching: Coaching, out_dir: Path) -> None:
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "coaching.json").write_text(json.dumps(asdict(coaching), indent=2, ensure_ascii=False), encoding="utf-8")
+    (out_dir / "coaching.md").write_text(render(coaching), encoding="utf-8")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("interview", type=Path, help="a voice interview results file (results/voice-interviews/<id>.json)")
+    parser.add_argument("--out", type=Path, default=OUT_DIR)
+    args = parser.parse_args()
+
+    from agentic_jev_rag.config import load_config
+    from agentic_jev_rag.corpus.documents import load_corpus
+    from agentic_jev_rag.openrouter import OpenRouterGateway
+    from agentic_jev_rag.system1 import make_deciders
+
+    config = load_config()
+    interview = json.loads(args.interview.read_text(encoding="utf-8"))
+    try:
+        check_interview(interview)
+        candidate = find_candidate(load_corpus(config.corpus_dir), interview["candidate_id"])
+        scorecards = (Path(config.corpus_dir) / "policies" / "scorecards.md").read_text(encoding="utf-8")
+        gateway = OpenRouterGateway.from_env()
+        decider = make_deciders(config, gateway)[config.system_1]
+        coaching = coach(gateway, config.models.system_2_model, decider, interview, candidate, scorecards)
+    except (CoachRefused, CoachFailed) as error:
+        raise SystemExit(f"coach: {error}") from error
+    write_outputs(coaching, args.out)
+    print(f"wrote {args.out / 'coaching.md'} (${coaching.cost_usd:.4f})")
+
+
+if __name__ == "__main__":
+    main()
