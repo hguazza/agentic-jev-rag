@@ -1,0 +1,156 @@
+{
+  "interview_id": "4781cadcddef4cd0b6742180c4dd765f",
+  "candidate_id": "C-0213",
+  "job_id": "J-061",
+  "finished": true,
+  "transcript": [
+    {
+      "question": "Hello, and thanks for your time. Before we start, please note that you are speaking with an AI system, and a human recruiter will review every assessment. This interview is for the AI/ML Engineer, Internal Platforms role at micro1, building autonomous AI recruiting agents. To begin, could you summarise the experience from your past work that you think is most relevant to this role?",
+      "kind": "question",
+      "answer": "Hi. I'm glad to be here. I'm so excited for this role. Yes. There are many projects, help me get to a point that it benefits my journey. Coming hard in micro one. And some of the projects are I have some multi agents behind Landgraf and calling AWS Bedrock. At These these agents would analyze like, huge transcription calls and each agent would be responsible for a category of items. So, basically, we have, like, five categories like, the compliance with data compliance, in which the person for call centers they they needed to do some some things to complete this item. Yeah. So I had, like, agents which were responsible for some categories. Which grouped some items and after that, another agent will carry the the results and we'll deliver, like, the final score from zero to a hundred And I also had LL. LLM as a judge. I had evals. To make sure the the the chunks of text the AI was using to justify this score I had some LLM as a judge to make sure this was really about the item each was describing and if we have some... If it was trustful What else? I also develop a live kit agent a voice agent. To which mimics a person So it had, like, a persona, It have, like, different triggers that would act different on the decisions it will make along the the conversation, right, along the the call. So... And different AI agents, which were mimicking bank clients Right? So the hero the real human is someone whom is someone who who calls to collect debt Right? So they are from, like, this this area of the bank, which, like, makes the call for persons... For people in that. And so, basically, he would get different types of client, and he would practice and he the monitoring and quality AI which were first used to monitor humans. It was also monitoring this this this worker of the client with the color And also it would have a coach Right? At the beginning, it was a coach, like, after the after the call. But with with decision models such as JAV, we were able to to qualify much faster and the was so much better to just give live hints Right? So throughout the call, the the seller gets some new recommendations of follow ups he can make. So it's very similar to a to a this agent here on micro one I hear the name is Zara. Where the agent itself have to has to response on different ways right, throughout the the call. And if the interview the interviewee such as myself here right now, you, the AI, should be able to respond on different ways, and take live decisions, right, not follow a script. So overall, I think that's what stands me for this position. Right? I have this these projects at deep that really talks to what we wanna wanna build here And what else is just look at this project I built right now, which is I built you, the AI that's interviewing me. I built an it is tightened to a length graph agents API which is behind an ECS Right? So I deployed in Docker, and then it's in ECS as a micro service. Both the APIs are built. Right? So there's an API which is for the interview, the recruiter, Right? So it runs the interview. We have the the interview end point, and we have the interview reply. Right, that it fetches, the question for us to reply. Besides in live kit where we try to give seamless the conversation. I'm talking too much right now. I will pass to you, but yeah, that's why I think I'm the most strongest fit. I also saw that you you you give extra points for candidates which want to deploy fast, want to experiment fast, And that's what I just showed here. This project. I have the evaluations. I have the comparisons for playing LLM to decision models such as JEV which is quite recent and shows that I'm always up to date. I'm always trying new things. I'm always experimenting, and I want to deploy as fast as possible. Right? I'm in a hurry. I want want people to be able to I want to make... I want to be able to make a difference as fast as possible in this field which is the recruitment field. And I want to do it with you, Macro One.",
+      "timing": {
+        "response_latency_s": 3.65,
+        "answer_duration_s": 447.5,
+        "words_per_minute": 102.0,
+        "filler_count": 0
+      }
+    },
+    {
+      "question": "Thanks for that overview. Let's go deeper on one piece of work. Pick one multi-agent system you built with LangGraph and tool calling, for example the call-quality scoring agents or the TrainHub voice agent. What problem were you solving and what was your role? Then walk me through how you designed the agents, the tools they could call and how they passed state to each other. What was the result?",
+      "kind": "question",
+      "answer": "Oh, sure. So I was working for a third party but solving problems for one of the top three banks in Brazil, which is Bradesco. And so they had, like, they had, like, this problem. They have, like, the many call centers. And to... And the call center make calls on debt collection. Right? And first, there is a huge rotation in this field. Right? Rotation, like, for for the the call center workers. And what else is they usually go straight to business and start cold calling people, asking for money. And they much of the times, they don't even have, like, they they even forget the basic stuff, which is confirm... Confirming the the ID, Right? Following the the right protocols, to not leak, like, data on the transcription calls. Because if you are leaking if you're not... If you ask for, for example, for the full ID of the person or maybe the full name. This is gonna be stored as a... In the transcript. In a transcript, in a database somewhere. Then you you are going what is the word? You're not following the law. Right? In Brazil, we call it the LGBT.",
+      "timing": {
+        "response_latency_s": 4.84,
+        "answer_duration_s": 111.15,
+        "words_per_minute": 106.3,
+        "filler_count": 0
+      }
+    }
+  ],
+  "assessment": {
+    "candidate_id": "C-0213",
+    "job_id": "J-061",
+    "turns": [
+      {
+        "question": "Hello, and thanks for your time. Before we start, please note that you are speaking with an AI system, and a human recruiter will review every assessment. This interview is for the AI/ML Engineer, Internal Platforms role at micro1, building autonomous AI recruiting agents. To begin, could you summarise the experience from your past work that you think is most relevant to this role?",
+        "answer": "Hi. I'm glad to be here. I'm so excited for this role. Yes. There are many projects, help me get to a point that it benefits my journey. Coming hard in micro one. And some of the projects are I have some multi agents behind Landgraf and calling AWS Bedrock. At These these agents would analyze like, huge transcription calls and each agent would be responsible for a category of items. So, basically, we have, like, five categories like, the compliance with data compliance, in which the person for call centers they they needed to do some some things to complete this item. Yeah. So I had, like, agents which were responsible for some categories. Which grouped some items and after that, another agent will carry the the results and we'll deliver, like, the final score from zero to a hundred And I also had LL. LLM as a judge. I had evals. To make sure the the the chunks of text the AI was using to justify this score I had some LLM as a judge to make sure this was really about the item each was describing and if we have some... If it was trustful What else? I also develop a live kit agent a voice agent. To which mimics a person So it had, like, a persona, It have, like, different triggers that would act different on the decisions it will make along the the conversation, right, along the the call. So... And different AI agents, which were mimicking bank clients Right? So the hero the real human is someone whom is someone who who calls to collect debt Right? So they are from, like, this this area of the bank, which, like, makes the call for persons... For people in that. And so, basically, he would get different types of client, and he would practice and he the monitoring and quality AI which were first used to monitor humans. It was also monitoring this this this worker of the client with the color And also it would have a coach Right? At the beginning, it was a coach, like, after the after the call. But with with decision models such as JAV, we were able to to qualify much faster and the was so much better to just give live hints Right? So throughout the call, the the seller gets some new recommendations of follow ups he can make. So it's very similar to a to a this agent here on micro one I hear the name is Zara. Where the agent itself have to has to response on different ways right, throughout the the call. And if the interview the interviewee such as myself here right now, you, the AI, should be able to respond on different ways, and take live decisions, right, not follow a script. So overall, I think that's what stands me for this position. Right? I have this these projects at deep that really talks to what we wanna wanna build here And what else is just look at this project I built right now, which is I built you, the AI that's interviewing me. I built an it is tightened to a length graph agents API which is behind an ECS Right? So I deployed in Docker, and then it's in ECS as a micro service. Both the APIs are built. Right? So there's an API which is for the interview, the recruiter, Right? So it runs the interview. We have the the interview end point, and we have the interview reply. Right, that it fetches, the question for us to reply. Besides in live kit where we try to give seamless the conversation. I'm talking too much right now. I will pass to you, but yeah, that's why I think I'm the most strongest fit. I also saw that you you you give extra points for candidates which want to deploy fast, want to experiment fast, And that's what I just showed here. This project. I have the evaluations. I have the comparisons for playing LLM to decision models such as JEV which is quite recent and shows that I'm always up to date. I'm always trying new things. I'm always experimenting, and I want to deploy as fast as possible. Right? I'm in a hurry. I want want people to be able to I want to make... I want to be able to make a difference as fast as possible in this field which is the recruitment field. And I want to do it with you, Macro One.",
+        "kind": "question",
+        "competency": "",
+        "check": "substantive",
+        "scored": true,
+        "timing": {
+          "response_latency_s": 3.65,
+          "answer_duration_s": 447.5,
+          "words_per_minute": 102.0,
+          "filler_count": 0
+        }
+      },
+      {
+        "question": "Thanks for that overview. Let's go deeper on one piece of work. Pick one multi-agent system you built with LangGraph and tool calling, for example the call-quality scoring agents or the TrainHub voice agent. What problem were you solving and what was your role? Then walk me through how you designed the agents, the tools they could call and how they passed state to each other. What was the result?",
+        "answer": "Oh, sure. So I was working for a third party but solving problems for one of the top three banks in Brazil, which is Bradesco. And so they had, like, they had, like, this problem. They have, like, the many call centers. And to... And the call center make calls on debt collection. Right? And first, there is a huge rotation in this field. Right? Rotation, like, for for the the call center workers. And what else is they usually go straight to business and start cold calling people, asking for money. And they much of the times, they don't even have, like, they they even forget the basic stuff, which is confirm... Confirming the the ID, Right? Following the the right protocols, to not leak, like, data on the transcription calls. Because if you are leaking if you're not... If you ask for, for example, for the full ID of the person or maybe the full name. This is gonna be stored as a... In the transcript. In a transcript, in a database somewhere. Then you you are going what is the word? You're not following the law. Right? In Brazil, we call it the LGBT.",
+        "kind": "question",
+        "competency": "LLM systems",
+        "check": "substantive",
+        "scored": true,
+        "timing": {
+          "response_latency_s": 4.84,
+          "answer_duration_s": 111.15,
+          "words_per_minute": 106.3,
+          "filler_count": 0
+        }
+      }
+    ],
+    "scores": [
+      {
+        "competency": "LLM systems",
+        "score": 4,
+        "evidence_chunk_ids": [],
+        "rationale": "No chunk ids were supplied, so this cites transcript answers. In A3 the candidate described a multi-agent LangGraph design in detail: a classification agent for call metadata, five category agents running 'in parallel searching for chunks', a consolidating agent that criticises results and 'could spin another sub agent' on contradictions, and a 'deterministic agent' that sums 0/1 item scores. State was shared through 'a state dict' holding the item, the relevant chunk and metadata. A1 also mentions Bedrock, an LLM-as-a-judge and a live voice agent. The answers are rambling and tool-calling specifics are thin, but the design is concrete and personally owned."
+      },
+      {
+        "competency": "Retrieval and evaluation",
+        "score": 3,
+        "evidence_chunk_ids": [],
+        "rationale": "In A4 the candidate described an LLM-as-a-judge for 'assertiveness' and hallucination, with numbers: Sonnet about 7%, Haiku about 20-25%, and a fine-tuned model reaching 'nine, ten percent'. They used this to pick cost-efficient models and to distil better models' outputs. However, 'I don't recall, like, recall k', so no retrieval metrics were given. They gave no detail on the RAG architecture (hybrid search, reranking, vector DB) and no labelled-set or deterministic harness detail. The answer was also confused ('I'm kinda lost in this huge explanation'). The CV claims much more (RAGAS, recall@k, MRR, CI gates) than the interview showed."
+      },
+      {
+        "competency": "Production engineering",
+        "score": 2,
+        "evidence_chunk_ids": [],
+        "rationale": "Little interview evidence on Python and FastAPI service quality. A1 only says there is an API with 'the interview end point' and 'the interview reply', deployed in Docker as a microservice. There was nothing on latency, testing, observability or concurrency design, and this was not asked directly. A3 mentions parallel agents and a deterministic scorer but not service engineering. The CV claims async APIs, 104 tests and an APISIX gateway, but those claims were not demonstrated in the interview. The classifier signal of 1.0 for this competency is not supported by the transcript."
+      },
+      {
+        "competency": "Cloud delivery",
+        "score": 3,
+        "evidence_chunk_ids": [],
+        "rationale": "In A1 the candidate says agents call 'AWS Bedrock' and that they 'deployed in Docker, and then it's in ECS as a micro service'. They also stress wanting to 'deploy as fast as possible' and 'experiment fast'. This shows hands-on AWS use and a shipping mindset. There was no detail on monitoring, scaling or customer-facing release practice, and the ECS claim conflicts with the CV for the personal project."
+      }
+    ],
+    "recommendation": "next_round",
+    "summary": "The candidate shows strong, concrete LangGraph multi-agent experience (parallel category agents, shared state, a critic that spawns retries, a deterministic scorer) and credible LLM-as-a-judge and model-cost work with numbers. The answers were rambling and often did not follow the STAR structure. Retrieval metrics were not recalled, RAG architecture detail was thin, and Python/FastAPI production engineering was not demonstrated. Scores of 4, 3, 2 and 3 average 3.0. Under the Interview Guide that is next_round, not hire, because the average is below 4 and Production engineering is below 3. The next round should probe FastAPI production practice (latency, testing, observability), retrieval metrics and the RAG design, and clarify the ECS-versus-Docker-Compose point. No protected characteristics were used. Four competency answers were given (A1-A4); the 'Answer 5' classifier signals have no matching transcript answer and the all-1.0 signals for A1-A3 were not relied on. A human recruiter should review.",
+    "red_flags": [
+      {
+        "kind": "contradiction",
+        "quote": "I deployed in Docker, and then it's in ECS as a micro service. Both the APIs are built.",
+        "detail": "The Dossier says both APIs of the independent recruiting-agent project 'run in Docker Compose'. It describes ECS only for service endpoints in the Deep work. Deployment of the personal project on ECS is not supported by the Dossier."
+      }
+    ],
+    "probes_sustained": {},
+    "integrity_signals": {
+      "note": "Advisory only, for human review. These timings never affect scores or the recommendation: long pauses and few filler words are also common for non-native speakers, disabled and neurodivergent candidates, and careful thinkers.",
+      "turns": [
+        {
+          "turn": 1,
+          "timing": {
+            "response_latency_s": 3.65,
+            "answer_duration_s": 447.5,
+            "words_per_minute": 102.0,
+            "filler_count": 0
+          },
+          "observation": null
+        },
+        {
+          "turn": 2,
+          "timing": {
+            "response_latency_s": 4.84,
+            "answer_duration_s": 111.15,
+            "words_per_minute": 106.3,
+            "filler_count": 0
+          },
+          "observation": null
+        },
+        {
+          "turn": 3,
+          "timing": {
+            "response_latency_s": null,
+            "answer_duration_s": 523.45,
+            "words_per_minute": 88.9,
+            "filler_count": 1
+          },
+          "observation": null
+        },
+        {
+          "turn": 4,
+          "timing": {
+            "response_latency_s": null,
+            "answer_duration_s": 72.71,
+            "words_per_minute": 151.0,
+            "filler_count": 0
+          },
+          "observation": null
+        },
+        {
+          "turn": 5,
+          "timing": {
+            "response_latency_s": 4.1,
+            "answer_duration_s": 305.7,
+            "words_per_minute": 90.9,
+            "filler_count": 4
+          },
+          "observation": null
+        }
+      ]
+    }
+  },
+  "error": null
+}

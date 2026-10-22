@@ -63,6 +63,12 @@ The Interviewer can hold a live **voice** interview through LiveKit (ADR 0012). 
 
 Every reply gets a **Turn check**, a System 1 decision (intelligible, prompt injection, substantive or shallow) made before the System 2 model is asked anything: gibberish is reprompted and injections redirected without a System 2 call, and shallow answers get up to two forensic **probes**. **Interview signals** (evidence per competency, consistency with the Dossier) are computed in the same LangGraph superstep as the next question, so they add no latency. Delivery timings are reported as advisory **integrity signals** and never scored (ADR 0013).
 
+After an interview, the Coach writes a debrief for the candidate, with model answers checked against their CV and Dossier (ADR 0015):
+
+    uv run python -m agentic_jev_rag.coach results/voice-interviews/<id>.json
+
+The author's coaching for J-061 is in [results/ai-engineer-showcase/coaching.md](results/ai-engineer-showcase/coaching.md).
+
 ## Architecture
 
 ```

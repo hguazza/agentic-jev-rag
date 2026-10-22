@@ -99,6 +99,10 @@ _Avoid_: voice agent (for the host alone), bot
 How a spoken answer was delivered (pause before it, duration, speaking rate, filler words), with an advisory observation for a human reviewer. Never used in scores or the recommendation (ADR 0013).
 _Avoid_: cheat detection, cheating score
 
+**Coach**:
+The agent that debriefs a Candidate on a finished voice interview: what each question tested, what cost points, a tighter model answer from their own CV and Dossier, and delivery habits to fix. Showcase only; never seen by a recruiter, never part of a score (ADR 0015).
+_Avoid_: feedback agent, tutor
+
 **Compliance**:
 The agent that checks the goal, the shortlist and the verdicts against Policy: fair hiring, Consent and grounded verdicts.
 _Avoid_: guardrail (for the whole agent)
