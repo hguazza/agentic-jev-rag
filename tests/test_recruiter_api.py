@@ -7,7 +7,8 @@ from fastapi.testclient import TestClient
 
 from agentic_jev_rag.gateway import ToolCall
 from agentic_jev_rag.recruiter.api import create_recruiter_app
-from tests.rag_scripts import by_agent, scripted_gateway
+from tests.interview_scripts import interview_gateway, interview_question, prompts_for
+from tests.rag_scripts import TURN_OUTCOMES, by_agent, scripted_gateway
 
 ADVANCE = {
     "decision": "advance",
@@ -53,11 +54,6 @@ def screener(model, messages, tools):
     return [ToolCall("scr", "submit_verdict", ADVANCE if candidate == "C-001" else REJECT)]
 
 
-def interview_question(prompt):
-    asked = int(re.search(r"Questions asked: (\d+)", prompt).group(1))
-    return {"done": asked >= 2, "question": f"Tell me about question {asked + 1}."}
-
-
 def recruiter_gateway(*, shortlist=("C-001", "C-003"), verdict="allowed", grounded=True):
     return scripted_gateway(
         verdict=verdict,
@@ -68,6 +64,16 @@ def recruiter_gateway(*, shortlist=("C-001", "C-003"), verdict="allowed", ground
         ),
         structured={"interview_question": interview_question, "interview_assessment": ASSESSMENT},
     )
+
+
+def run(api, body):
+    """Starts a run and reads its result; TestClient finishes background tasks before returning the response."""
+    accepted = api.post("/runs", json=body)
+    assert accepted.status_code == 202, accepted.text
+    assert accepted.json()["status"] == "running"
+    status = api.get(f"/runs/{accepted.json()['run_id']}").json()
+    assert status["status"] == "complete", status
+    return status["report"]
 
 
 @pytest.fixture
@@ -81,7 +87,7 @@ def client(recruiter_context):
 def test_a_discriminatory_goal_is_refused_before_any_agent_runs(client):
     gateway = recruiter_gateway(verdict="discriminatory")
 
-    report = client(gateway).post("/runs", json={"goal": "Backend engineers, men under 35 only", "job_id": "J-001"}).json()
+    report = run(client(gateway), {"goal": "Backend engineers, men under 35 only", "job_id": "J-001"})
 
     assert report["refused"] is True
     assert report["shortlist"] is None
@@ -91,10 +97,8 @@ def test_a_discriminatory_goal_is_refused_before_any_agent_runs(client):
 
 
 def test_a_full_run_produces_a_recruitment_report(client):
-    response = client(recruiter_gateway()).post("/runs", json={"goal": "Fill the senior backend role", "job_id": "J-001"})
+    report = run(client(recruiter_gateway()), {"goal": "Fill the senior backend role", "job_id": "J-001"})
 
-    assert response.status_code == 200
-    report = response.json()
     assert report["refused"] is False
     assert [c["candidate_id"] for c in report["shortlist"]["candidates"]] == ["C-001", "C-003"]
     assert {v["candidate_id"]: v["decision"] for v in report["verdicts"]} == {"C-001": "advance", "C-003": "reject"}
@@ -111,9 +115,7 @@ def test_a_full_run_produces_a_recruitment_report(client):
 
 
 def test_candidates_without_valid_consent_never_reach_the_shortlist(client):
-    report = client(recruiter_gateway(shortlist=("C-004", "C-001"))).post(
-        "/runs", json={"goal": "Fill the senior backend role", "job_id": "J-001"}
-    ).json()
+    report = run(client(recruiter_gateway(shortlist=("C-004", "C-001"))), {"goal": "Fill the senior backend role", "job_id": "J-001"})
 
     assert [c["candidate_id"] for c in report["shortlist"]["candidates"]] == ["C-001"]
     assert {"check": "consent", "subject": "C-004", "passed": False} == {
@@ -123,17 +125,16 @@ def test_candidates_without_valid_consent_never_reach_the_shortlist(client):
 
 
 def test_ungrounded_verdicts_are_flagged_in_the_report(client):
-    report = client(recruiter_gateway(grounded=False)).post(
-        "/runs", json={"goal": "Fill the senior backend role", "job_id": "J-001"}
-    ).json()
+    report = run(client(recruiter_gateway(grounded=False)), {"goal": "Fill the senior backend role", "job_id": "J-001"})
 
     assert any(f["check"] == "groundedness" and not f["passed"] for f in report["findings"])
 
 
 def test_runs_can_switch_to_the_jev_decider(client):
-    report = client(recruiter_gateway()).post(
-        "/runs", json={"goal": "Fill the senior backend role", "job_id": "J-001", "system_1": "jev", "simulate_interviews": False}
-    ).json()
+    report = run(
+        client(recruiter_gateway()),
+        {"goal": "Fill the senior backend role", "job_id": "J-001", "system_1": "jev", "simulate_interviews": False},
+    )
 
     assert {t["implementation"] for t in report["system_1_trace"]} == {"jev"}
     assert report["assessments"] == []
@@ -168,9 +169,7 @@ def test_interviews_need_a_known_id_and_a_candidate_with_valid_consent(client):
 
 
 def test_a_duplicated_candidate_in_the_shortlist_still_gets_a_compliance_review(client):
-    report = client(recruiter_gateway(shortlist=("C-001", "C-001", "C-003"))).post(
-        "/runs", json={"goal": "Fill the senior backend role", "job_id": "J-001"}
-    ).json()
+    report = run(client(recruiter_gateway(shortlist=("C-001", "C-001", "C-003"))), {"goal": "Fill the senior backend role", "job_id": "J-001"})
 
     assert [c["candidate_id"] for c in report["shortlist"]["candidates"]] == ["C-001", "C-003"]
     assert {f["check"] for f in report["findings"]} >= {"consent", "groundedness"}
@@ -195,3 +194,146 @@ def test_an_out_of_range_interview_assessment_is_retried_then_reported_as_a_502(
     always_bad.post(f"/interviews/{started['interview_id']}/reply", json={"message": "Kafka."})
     failed = always_bad.post(f"/interviews/{started['interview_id']}/reply", json={"message": "On-call."})
     assert failed.status_code == 502
+
+
+def test_a_reply_retried_after_a_502_does_not_record_the_retry_message_as_another_answer(client):
+    calls = {"n": 0}
+
+    def flaky(prompt):
+        calls["n"] += 1
+        if calls["n"] in (2, 3):  # the question after the first answer is invalid twice: the first reply is a 502
+            return {"done": False, "question": ""}
+        return interview_question(prompt)
+
+    api = client(scripted_gateway(structured={"interview_question": flaky, "interview_assessment": ASSESSMENT}))
+    started = api.post("/interviews", json={"candidate_id": "C-001", "job_id": "J-001"}).json()
+    reply = f"/interviews/{started['interview_id']}/reply"
+
+    failed = api.post(reply, json={"message": "I partitioned Kafka topics."})
+    retried = api.post(reply, json={"message": "RETRY MESSAGE, must not be recorded"})
+    done = api.post(reply, json={"message": "I owned on-call."})
+
+    assert failed.status_code == 502
+    assert retried.status_code == 200 and retried.json()["question"] == "Tell me about question 2."
+    assert [t["answer"] for t in done.json()["assessment"]["turns"]] == ["I partitioned Kafka topics.", "I owned on-call."]
+
+
+def test_a_failed_turn_check_is_a_502_and_replying_again_continues_without_duplicating(client):
+    failures = iter([None])  # the first Turn check returns invalid output
+
+    api = client(interview_gateway(turn=lambda answer: next(failures, TURN_OUTCOMES["substantive"])))
+    started = api.post("/interviews", json={"candidate_id": "C-001", "job_id": "J-001"}).json()
+    url = f"/interviews/{started['interview_id']}/reply"
+
+    assert api.post(url, json={"message": "I partitioned Kafka topics."}).status_code == 502
+    retried = api.post(url, json={"message": "I partitioned Kafka topics."}).json()
+    done = api.post(url, json={"message": "I owned on-call."}).json()
+
+    assert retried["question"] == "Tell me about question 2." and retried["question_kind"] == "question"
+    assert [t["answer"] for t in done["assessment"]["turns"]] == ["I partitioned Kafka topics.", "I owned on-call."]
+
+
+def test_reply_timing_is_kept_per_turn_reported_as_advisory_and_never_shown_to_the_assessor(client):
+    gateway = interview_gateway()
+    api = client(gateway)
+    started = api.post("/interviews", json={"candidate_id": "C-001", "job_id": "J-001"}).json()
+    url = f"/interviews/{started['interview_id']}/reply"
+    timing = {"response_latency_s": 12.5, "answer_duration_s": 40.0, "words_per_minute": 195.0, "filler_count": 0}
+
+    api.post(url, json={"message": "I partitioned Kafka topics.", "timing": timing})
+    done = api.post(url, json={"message": "I owned on-call."}).json()
+
+    assessment = done["assessment"]
+    assert assessment["turns"][0]["timing"] == timing and assessment["turns"][1]["timing"] is None
+    [observed] = assessment["integrity_signals"]["turns"]
+    assert observed["turn"] == 1 and observed["observation"]
+    assert "never affect" in assessment["integrity_signals"]["note"]
+    assert [f["check"] for f in done["findings"]] == ["integrity"] and done["findings"][0]["passed"]
+    prompt = prompts_for(gateway, "interview_assessment")[-1]
+    assert "12.5" not in prompt and "response_latency" not in prompt and "filler" not in prompt.lower()
+
+
+def test_an_interview_continues_on_another_instance_when_checkpoints_are_in_dynamodb(
+    recruiter_context, dynamodb_tables, caplog
+):
+    from dataclasses import replace
+
+    gateway = recruiter_gateway()
+
+    def instance():
+        ctx = recruiter_context(gateway)
+        ctx.config = replace(ctx.config, **dynamodb_tables)
+        return TestClient(create_recruiter_app(ctx))
+
+    first, second = instance(), instance()
+
+    started = first.post("/interviews", json={"candidate_id": "C-001", "job_id": "J-001"}).json()
+    next_question = second.post(f"/interviews/{started['interview_id']}/reply", json={"message": "I partitioned Kafka topics."}).json()
+    assert next_question["question"] == "Tell me about question 2."
+    done = first.post(f"/interviews/{started['interview_id']}/reply", json={"message": "I owned on-call."}).json()
+
+    assert done["assessment"]["recommendation"] == "next_round"
+    assert [t["answer"] for t in done["assessment"]["turns"]] == ["I partitioned Kafka topics.", "I owned on-call."]
+    # LangGraph will refuse checkpointed types it was not told about; every type the interview stores is allowed
+    assert not [r for r in caplog.records if "unregistered type" in r.getMessage()]
+
+
+def test_a_run_whose_models_fail_is_reported_as_failed(client):
+    from agentic_jev_rag.openrouter import OpenRouterError
+
+    def down(model, messages, tools):
+        raise OpenRouterError("OpenRouter is down")
+
+    gateway = scripted_gateway(verdict="allowed", chat_responder=by_agent(Supervisor=down))
+    api = client(gateway)
+
+    run_id = api.post("/runs", json={"goal": "Fill the senior backend role", "job_id": "J-001"}).json()["run_id"]
+    status = api.get(f"/runs/{run_id}").json()
+
+    assert status["status"] == "failed"
+    assert "OpenRouter is down" in status["error"] and status["report"] is None
+
+
+def test_a_run_left_running_too_long_is_reported_as_interrupted(recruiter_context):
+    from agentic_jev_rag.recruiter.persistence import MemoryRuns, RunRecord
+
+    runs = MemoryRuns()
+    runs.put(RunRecord(run_id="old", status="running", started_at=0.0))
+    api = TestClient(create_recruiter_app(recruiter_context(recruiter_gateway()), runs=runs))
+
+    status = api.get("/runs/old").json()
+
+    assert status["status"] == "failed" and "interrupted" in status["error"]
+
+
+def test_an_unknown_run_is_404(client):
+    assert client(recruiter_gateway()).get("/runs/nope").status_code == 404
+
+
+@pytest.fixture
+def keyed(recruiter_context):
+    from dataclasses import replace
+
+    ctx = recruiter_context(recruiter_gateway())
+    ctx.config = replace(ctx.config, api_key="s3cret")
+    return TestClient(create_recruiter_app(ctx))
+
+
+def test_with_an_api_key_set_every_route_but_health_and_docs_needs_it(keyed):
+    start = {"candidate_id": "C-001", "job_id": "J-001"}
+
+    assert keyed.post("/interviews", json=start).status_code == 401
+    assert keyed.post("/interviews", json=start, headers={"X-API-Key": "wrong"}).status_code == 401
+    assert keyed.post("/runs", json={"goal": "Fill it", "job_id": "J-001"}).status_code == 401
+    assert keyed.get("/runs/any").status_code == 401
+    assert keyed.post("/interviews/any/reply", json={"message": "hi"}).status_code == 401
+    assert keyed.get("/health").status_code == 200
+    assert keyed.get("/docs").status_code == 200 and keyed.get("/openapi.json").status_code == 200
+
+    assert keyed.post("/interviews", json=start, headers={"X-API-Key": "café".encode("latin-1")}).status_code == 401
+    started = keyed.post("/interviews", json=start, headers={"X-API-Key": "s3cret"})
+    assert started.status_code == 200 and started.json()["question"]
+
+
+def test_without_an_api_key_set_auth_is_off(client):
+    assert client(recruiter_gateway()).post("/interviews", json={"candidate_id": "C-001", "job_id": "J-001"}).status_code == 200

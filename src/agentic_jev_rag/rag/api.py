@@ -225,7 +225,6 @@ def create_rag_app(service: RagService) -> FastAPI:
 def create_default_rag_app() -> FastAPI:
     """The app as deployed: config from file and environment, real OpenRouter, the committed corpus."""
     config = load_config()
-    service = RagService(
-        config, OpenRouterGateway.from_env(), QdrantClient(url=config.qdrant_url), load_corpus(config.corpus_dir)
-    )
+    qdrant = QdrantClient(url=config.qdrant_url, api_key=config.qdrant_api_key or None)
+    service = RagService(config, OpenRouterGateway.from_env(), qdrant, load_corpus(config.corpus_dir))
     return create_rag_app(service)

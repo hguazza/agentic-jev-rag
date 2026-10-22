@@ -13,6 +13,9 @@ from agentic_jev_rag.gateway import ChatResult, Completion, Decisions, Embedding
 BASE_URL = "https://openrouter.ai/api/v1"
 API_KEY_VARIABLE = "OPEN_ROUTER_API_TOKEN"
 TRANSIENT_STATUSES = {408, 429, 500, 502, 503, 504}
+# Without max_tokens OpenRouter reserves credit for the model's whole output window (often 65536 tokens) and refuses
+# the call with 402 when the key cannot cover it, even though the answer would be a few hundred tokens.
+MAX_OUTPUT_TOKENS = 16384
 
 
 class OpenRouterError(Exception):
@@ -38,6 +41,7 @@ class OpenRouterGateway:
         max_attempts: int = 4,
         backoff_s: float = 1.0,
         timeout_s: float = 120.0,
+        max_tokens: int = MAX_OUTPUT_TOKENS,
         transport: httpx.BaseTransport | None = None,
         clock: Callable[[], float] = time.perf_counter,
         sleep: Callable[[float], None] = time.sleep,
@@ -48,6 +52,7 @@ class OpenRouterGateway:
             timeout=timeout_s,
             transport=transport,
         )
+        self._max_tokens = max_tokens
         self._max_attempts = max_attempts
         self._backoff_s = backoff_s
         self._clock = clock
@@ -72,7 +77,7 @@ class OpenRouterGateway:
         """Chat completion. `response_schema` is (name, JSON schema) for strict structured output."""
         messages = [{"role": "system", "content": system}] if system else []
         messages.append({"role": "user", "content": prompt})
-        request: dict[str, Any] = {"model": model, "messages": messages}
+        request: dict[str, Any] = {"model": model, "messages": messages, "max_tokens": self._max_tokens}
         if response_schema:
             name, schema = response_schema
             request["response_format"] = {
@@ -88,7 +93,7 @@ class OpenRouterGateway:
         )
 
     def chat(self, model: str, messages: list[dict], *, tools: list[dict] | None = None) -> ChatResult:
-        request: dict[str, Any] = {"model": model, "messages": messages}
+        request: dict[str, Any] = {"model": model, "messages": messages, "max_tokens": self._max_tokens}
         if tools:
             request["tools"] = tools
         body, latency, retries = self._post("/chat/completions", request)

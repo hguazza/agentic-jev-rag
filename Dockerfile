@@ -1,5 +1,6 @@
-# One image for both services; docker-compose.yml picks the command.
-FROM python:3.12-slim
+# Two images from one build: `api` (the RAG and Recruiter APIs; docker-compose.yml and ECS pick the command)
+# and `voice` (the LiveKit voice worker). `api` is last, so it is the default target.
+FROM python:3.12-slim AS base
 COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /uvx /bin/
 
 WORKDIR /app
@@ -14,5 +15,12 @@ COPY corpus ./corpus
 RUN uv sync --frozen --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH" CONFIG=/app/configs/recruiter.toml
+
+# The voice dependency group, with the Silero VAD and turn-detector model files downloaded at build time.
+FROM base AS voice
+RUN uv sync --frozen --no-dev --group voice && python -m agentic_jev_rag.voice download-files
+CMD ["python", "-m", "agentic_jev_rag.voice", "start"]
+
+FROM base AS api
 EXPOSE 8000
 CMD ["uvicorn", "agentic_jev_rag.rag.api:create_default_rag_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]

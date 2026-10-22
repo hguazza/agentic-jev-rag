@@ -1,12 +1,30 @@
-"""Compliance: the Input guardrail on the goal, then Consent, grounded verdicts and policy on the results."""
+"""Compliance: the Input guardrail on the goal, then Consent, grounded verdicts and policy on the results.
 
+An integrity check on interview assessments keeps delivery timing out of scores (ADR 0013).
+"""
+
+import re
 from datetime import date
 
 from agentic_jev_rag.recruiter.context import RecruiterContext
 from agentic_jev_rag.recruiter.rag_client import RagError
-from agentic_jev_rag.recruiter.schemas import ComplianceFinding, ScreeningVerdict, Shortlist
+from agentic_jev_rag.recruiter.schemas import ComplianceFinding, InterviewAssessment, ScreeningVerdict, Shortlist
 from agentic_jev_rag.system1 import System1TraceEntry
 
+# Phrases about how the Candidate delivered an answer; plain technical words (latency, pause) must not match.
+TIMING_TERMS = re.compile(
+    r"""\b(?:
+        long\s+pauses?
+        | pause[sd]?\s+before\s+(?:answering|responding|the\s+answer)
+        | filler\s+words?
+        | fillers
+        | speaking\s+(?:rate|speed)
+        | words\s+per\s+minute
+        | (?:hesitated|hesitation)\s+before\s+(?:answering|responding)
+        | took\s+(?:a\s+)?long(?:er)?\s+(?:time\s+)?to\s+(?:answer|respond)
+    )\b""",
+    re.I | re.X,
+)
 REJECTION_QUESTION = "What must happen before a candidate rejected with the help of an AI system is told?"
 
 
@@ -70,3 +88,19 @@ def _groundedness(ctx: RecruiterContext, verdict: ScreeningVerdict) -> tuple[Com
         else "Screening verdict is not supported by its evidence; a human must review it before it is acted on."
     )
     return ComplianceFinding(check="groundedness", subject=verdict.candidate_id, passed=decision.grounded, detail=detail), decision.trace
+
+
+def integrity_finding(assessment: InterviewAssessment) -> ComplianceFinding:
+    """Integrity signals are advisory (ADR 0013): no score rationale or summary may cite delivery timing."""
+    texts = [assessment.summary, *(s.rationale for s in assessment.scores)]
+    cited = sorted({m.group(0).lower() for text in texts for m in TIMING_TERMS.finditer(text)})
+    if not cited:
+        return ComplianceFinding(
+            check="integrity", subject=assessment.candidate_id, passed=True,
+            detail="No delivery timing was cited in the scores or the recommendation.",
+        )
+    return ComplianceFinding(
+        check="integrity", subject=assessment.candidate_id, passed=False,
+        detail=f"The assessment cites delivery timing ({', '.join(cited)}). Integrity signals are advisory only and must "
+        "not affect scores; a human must review it.",
+    )

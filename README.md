@@ -5,7 +5,7 @@ An autonomous AI recruiter for **SwiftAI Recruit**, a fictional recruiting compa
 - **RAG API** (FastAPI): Search, Match and Ask over a recruiting corpus of CVs, Jobs, interview notes and Policies. It uses hybrid retrieval (dense plus sparse, fused with RRF), a reranker, and grounded answers with citations.
 - **Recruiter API** (FastAPI and LangGraph): a five-agent system (Supervisor, Sourcer, Screener, Interviewer, Compliance). It turns a hiring goal into a **Recruitment report** and reaches the RAG only through HTTP tools.
 
-The fast, typed checks inside the pipeline are the **System 1 decisions**: Route, Chunk relevance, Input guardrail and Groundedness check. Each can be made by a small LLM or by **Jev**, TypeSafe's "System One" model. The project measures how the two compare.
+The fast, typed checks inside the pipeline are the **System 1 decisions**: Route, Chunk relevance, Input guardrail, Groundedness check, Turn check and Interview signals. Each can be made by a small LLM or by **Jev**, TypeSafe's "System One" model. The project measures how the two compare.
 
 Vocabulary: `CONTEXT.md`. Design: `docs/superpowers/specs/2026-10-08-recruiter-design.md`. Decisions: `docs/adr/`. The earlier EU legal benchmark is parked in `docs/parked/`.
 
@@ -13,33 +13,37 @@ Vocabulary: `CONTEXT.md`. Design: `docs/superpowers/specs/2026-10-08-recruiter-d
 
 ### System 1 comparison: LLM decider vs Jev
 
-The LLM decider is the System 1 baseline (`anthropic/claude-haiku-4.5`, strict structured output). Jev is `typesafe/jev-1.13`. Both are called through OpenRouter with the same instructions, over 170 hand-labelled examples (`evals/data/`). Latency is end-to-end through OpenRouter.
+The LLM decider is the System 1 baseline (`anthropic/claude-haiku-4.5`, strict structured output). Jev is `typesafe/jev-1.13`. Both are called through OpenRouter with the same instructions, 230 hand-labelled examples (`evals/data/`). Latency is end-to-end through OpenRouter.
 
 | decision | implementation | n | accuracy | p50 latency (s) | p95 latency (s) | mean cost ($) |
 |---|---|---|---|---|---|---|
-| input_guardrail | llm | 60 | 95% | 1.601 | 2.041 | 0.0005196 |
-| input_guardrail | jev | 60 | 98% | 0.438 | 0.547 | 0.0000231 |
-| route | llm | 40 | 100% | 1.525 | 2.074 | 0.0003813 |
-| route | jev | 40 | 100% | 0.440 | 0.601 | 0.0000187 |
-| chunk_relevance | llm | 40 | 100% | 1.636 | 1.908 | 0.0003830 |
-| chunk_relevance | jev | 40 | 98% | 0.452 | 0.503 | 0.0000174 |
-| groundedness | llm | 30 | 100% | 1.589 | 1.852 | 0.0003423 |
-| groundedness | jev | 30 | 97% | 0.422 | 0.499 | 0.0000167 |
+| chunk_relevance | llm | 40 | 100% | 1.746 | 2.264 | 0.0003830 |
+| chunk_relevance | jev | 40 | 98% | 0.584 | 0.665 | 0.0000174 |
+| groundedness | llm | 30 | 100% | 1.779 | 2.190 | 0.0003421 |
+| groundedness | jev | 30 | 97% | 0.568 | 0.667 | 0.0000167 |
+| input_guardrail | llm | 60 | 97% | 1.839 | 2.322 | 0.0005192 |
+| input_guardrail | jev | 60 | 98% | 0.580 | 0.688 | 0.0000231 |
+| route | llm | 40 | 100% | 1.780 | 2.306 | 0.0003813 |
+| route | jev | 40 | 100% | 0.586 | 0.649 | 0.0000187 |
+| turn_check | llm | 60 | 98% | 1.815 | 2.225 | 0.0007266 |
+| turn_check | jev | 60 | 95% | 0.570 | 0.634 | 0.0000311 |
 
 | decision | Jev speed-up (p50) | Jev cost per decision | accuracy gap (Jev − LLM) |
 |---|---|---|---|
-| input_guardrail | 3.7× faster | 22× cheaper | +3 pts |
-| route | 3.5× faster | 20× cheaper | +0 pts |
-| chunk_relevance | 3.6× faster | 22× cheaper | −3 pts |
-| groundedness | 3.8× faster | 20× cheaper | −3 pts |
+| chunk_relevance | 3.0× faster | 22× cheaper | −3 pts |
+| groundedness | 3.1× faster | 20× cheaper | −3 pts |
+| input_guardrail | 3.2× faster | 22× cheaper | +2 pts |
+| route | 3.0× faster | 20× cheaper | +0 pts |
+| turn_check | 3.2× faster | 23× cheaper | −3 pts |
 
-On these sets, Jev matches the LLM decider within 3 points on every decision, about 3.5× faster and about 20× cheaper per decision.
+On these sets, Jev matches the LLM decider within 3 points on every decision, about 3× faster and about 20× cheaper per decision.
 
 Caveats on reading these numbers:
 
-- **Small samples.** A single example moves accuracy by 2–3 points, and repeated runs vary by that much (the LLM guardrail scored 97% on an earlier run).
+- **Small samples.** A single example moves accuracy by 2–3 points, and repeated runs vary by that much (the LLM guardrail scored 95% on an earlier run).
 - **Hardest guardrail case.** Both deciders allowed one indirect proxy: "must live within 2 km of the office even though the role is hybrid".
-- **Raw files:** `results/system1-2026-10-08/`. Re-run with `uv run python -m agentic_jev_rag.evals.system1`.
+- **Turn check.** Jev missed no prompt injections and reprompted no real answers; the LLM decider reprompted or redirected one real answer.
+- **Raw files:** `results/system1-2026-10-09/`. Re-run with `uv run python -m agentic_jev_rag.evals.system1`.
 
 ### Match evaluation
 
@@ -52,6 +56,12 @@ This is a deliberately noisy baseline. Outcomes were drawn so they only lean on 
 `results/recruiter-runs/J-037-jev.json` is a full run for a Senior Linux Administrator Job with Jev as the System 1 decider. The Sourcer shortlisted 6 Candidates (all with valid Consent), and the Screener gave each a verdict citing CV chunks per Scorecard competency. All 6 cleared the policy's lenient advance rule (no competency at 1, average of 3 or more). Every verdict passed Jev's Groundedness check. The Interviewer then interviewed the top Candidate, a Simulated candidate, over 4 questions and recommended **no_hire**, because the hands-on Linux depth wasn't there.
 
 The run cost $0.38 in Recruiter-side model calls and took about 3 minutes.
+
+## Voice interview
+
+The Interviewer can hold a live **voice** interview through LiveKit (ADR 0012). A LiveKit Agents worker turns speech into text, and a fast Voice host LLM asks the interview graph's questions out loud; the graph still decides every question and the assessment, and answers reach it as the exact transcript. See `docs/voice-demo.md` to run it from the LiveKit Agents Playground. It needs a LiveKit Cloud project (free tier) in `.env`.
+
+Every reply gets a **Turn check**, a System 1 decision (intelligible, prompt injection, substantive or shallow) made before the System 2 model is asked anything: gibberish is reprompted and injections redirected without a System 2 call, and shallow answers get up to two forensic **probes**. **Interview signals** (evidence per competency, consistency with the Dossier) are computed in the same LangGraph superstep as the next question, so they add no latency. Delivery timings are reported as advisory **integrity signals** and never scored (ADR 0013).
 
 ## Architecture
 
@@ -109,13 +119,14 @@ curl -s localhost:8000/ask -H 'Content-Type: application/json' \
 # Rank Candidates for a Job
 curl -s localhost:8000/match -H 'Content-Type: application/json' -d '{"job_id": "J-037", "top_k": 5}'
 
-# A discriminatory goal is refused before any agent runs
+# A discriminatory goal is refused before any agent runs (poll the run id it returns)
 curl -s localhost:8001/runs -H 'Content-Type: application/json' \
   -d '{"goal": "Fill J-037 with young graduates only", "job_id": "J-037"}'
 
-# A full recruitment (about 3 minutes, about $0.40)
+# A full recruitment (about 3 minutes, about $0.40): start it, then poll until status is complete
 curl -s localhost:8001/runs -H 'Content-Type: application/json' \
   -d '{"goal": "Fill the Senior Linux Administrator role", "job_id": "J-037", "system_1": "jev", "max_interviews": 1}'
+curl -s localhost:8001/runs/<run_id>
 
 # A live interview: start it, then reply to each question
 curl -s localhost:8001/interviews -H 'Content-Type: application/json' -d '{"candidate_id": "C-0040", "job_id": "J-037"}'
@@ -128,8 +139,8 @@ OpenAPI docs are served at `localhost:8000/docs` and `localhost:8001/docs`.
 
 ```sh
 uv sync
-docker compose up -d qdrant
-uv run pytest            # 104 tests, offline except Qdrant; the Model gateway is the only fake
+docker compose up -d qdrant dynamodb
+uv run pytest            # about 200 tests, offline except Qdrant and DynamoDB Local; the Model gateway is the only fake
 uv run pytest -m live    # real OpenRouter calls: every Model role, Ask with both deciders, one full Recruiter run (about $1)
 ```
 
@@ -143,15 +154,39 @@ Tests sit at the public seams:
 
 ## Configuration
 
-`configs/recruiter.toml` names an OpenRouter model for every Model role, so swapping a model is a config edit. The environment can override `QDRANT_URL`, `RAG_URL`, `SYSTEM_1` and `CONFIG` (the path to the TOML file).
+`configs/recruiter.toml` names an OpenRouter model for every Model role, so swapping a model is a config edit. The environment can override `QDRANT_URL`, `QDRANT_API_KEY`, `RAG_URL`, `SYSTEM_1`, `PERSISTENCE` (`memory` or `dynamodb`), `CHECKPOINT_TABLE`, `RUNS_TABLE`, `DYNAMODB_ENDPOINT`, `RECRUITER_API_KEY` (turns on `X-API-Key` auth) and `CONFIG` (the path to the TOML file).
+
+## Deploy to AWS
+
+ECS Fargate behind CloudFront, with interview checkpoints and run records in DynamoDB, all in Terraform (`infra/`; design: `docs/superpowers/specs/2026-10-09-aws-deployment-design.md`, ADR 0014).
+
+```
+Reviewer ─HTTPS─▶ CloudFront + WAF ─VPC origin─▶ internal ALB ─▶ recruiter-api (ECS) ─▶ rag-api (ECS) ─▶ Qdrant Cloud
+LiveKit Agents Playground ⇄ LiveKit Cloud ⇄ voice-worker (ECS) ─▶ recruiter-api
+                                              recruiter-api ─▶ DynamoDB (checkpoints, runs)
+```
+
+Once, by hand (needs Terraform ≥ 1.10, an AWS profile for `us-east-1` and a Qdrant Cloud cluster):
+
+```sh
+terraform -chdir=infra/bootstrap init && terraform -chdir=infra/bootstrap apply   # state bucket + GitHub OIDC role
+printf 'bucket = "%s"\n' "$(terraform -chdir=infra/bootstrap output -raw state_bucket)" > infra/main/backend.hcl
+cp .env.aws.example .env.aws                                                       # fill the secret values
+cp infra/main/terraform.tfvars.example infra/main/terraform.tfvars                 # alert email, Qdrant Cloud URL
+terraform -chdir=infra/main init -backend-config=backend.hcl
+terraform -chdir=infra/main apply -var image_tag=bootstrap -target=aws_ecr_repository.image -target=aws_secretsmanager_secret.app
+infra/scripts/put-secrets.sh
+TAG=$(infra/scripts/push-images.sh | tail -1)
+terraform -chdir=infra/main apply -var image_tag="$TAG"
+infra/scripts/ingest.sh
+```
+
+After that, every green CI run on `main` deploys through GitHub OIDC (`.github/workflows/deploy.yml`; it needs a GitHub environment `production` with the variables `AWS_DEPLOY_ROLE_ARN`, `ALERT_EMAIL` and `QDRANT_URL`). Every route but `/health` needs `X-API-Key`; the docs are at `<api_url>/docs`. For a voice interview against AWS, open the LiveKit Agents Playground for the same LiveKit project (`docs/voice-demo.md`). Between demos, `terraform -chdir=infra/main apply -var image_tag=<current> -var running=false` scales to zero and removes the NAT gateway (about $25/month left running). Set the `production` environment variable `RUNNING` to `false` too, or the next deploy brings it back.
 
 ## Not in v1
 
-- AWS deployment (the images are ready for ECS).
 - Student recruitment for institutions.
 - Languages other than English.
 - A UI.
-- Authentication.
 - Integrations with an ATS, email or scheduling.
 - An MCP adapter over the RAG API.
-- Durable interview state: live interviews are kept in memory (LangGraph `InMemorySaver`) and are lost on restart.

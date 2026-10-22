@@ -15,6 +15,7 @@ FAKE_MODELS = ModelConfig(
     embedding_model="fake/embedding",
     reranker="fake/reranker",
     jev_model="fake/jev",
+    voice_host="fake/voice-host",
 )
 
 
@@ -76,3 +77,43 @@ def recruiter_context(indexed, config, qdrant, fixture_documents):
         return RecruiterContext(config=config, gateway=gateway, rag=rag, system_1=system_1, today=lambda: TODAY)
 
     return make
+
+
+DYNAMODB_ENDPOINT = os.environ.get("DYNAMODB_ENDPOINT", "http://localhost:8002")
+
+
+@pytest.fixture(scope="session")
+def dynamodb_tables():
+    """Fresh checkpoint and run tables in DynamoDB Local, with the key schemas infra/main/data.tf creates.
+
+    Returns Config overrides that point the Recruiter's persistence at them."""
+    import boto3
+
+    client = boto3.client(
+        "dynamodb",
+        endpoint_url=DYNAMODB_ENDPOINT,
+        region_name="us-east-1",
+        aws_access_key_id="local",
+        aws_secret_access_key="local",
+    )
+    try:
+        client.list_tables()
+    except Exception as exc:  # pragma: no cover - environment guard
+        pytest.fail(f"DynamoDB Local is not reachable at {DYNAMODB_ENDPOINT}; run `docker compose up -d dynamodb` ({exc})")
+    suffix = uuid.uuid4().hex[:8]
+    checkpoints, runs = f"test-checkpoints-{suffix}", f"test-runs-{suffix}"
+    client.create_table(
+        TableName=checkpoints,
+        BillingMode="PAY_PER_REQUEST",
+        AttributeDefinitions=[{"AttributeName": "PK", "AttributeType": "S"}, {"AttributeName": "SK", "AttributeType": "S"}],
+        KeySchema=[{"AttributeName": "PK", "KeyType": "HASH"}, {"AttributeName": "SK", "KeyType": "RANGE"}],
+    )
+    client.create_table(
+        TableName=runs,
+        BillingMode="PAY_PER_REQUEST",
+        AttributeDefinitions=[{"AttributeName": "run_id", "AttributeType": "S"}],
+        KeySchema=[{"AttributeName": "run_id", "KeyType": "HASH"}],
+    )
+    yield {"persistence": "dynamodb", "checkpoint_table": checkpoints, "runs_table": runs, "dynamodb_endpoint": DYNAMODB_ENDPOINT}
+    for table in (checkpoints, runs):
+        client.delete_table(TableName=table)

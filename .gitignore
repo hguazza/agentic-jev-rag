@@ -2,8 +2,16 @@
 .venv/
 __pycache__/
 .ipynb_checkpoints/
-data/
+/data/
 .scratch/
 .DS_Store
 .superpowers/
 results/*/records.jsonl
+# Terraform: local state and plugins (the lock file is committed)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+# Secret values for infra/scripts/put-secrets.sh
+.env.aws

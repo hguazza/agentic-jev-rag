@@ -10,14 +10,27 @@ from agentic_jev_rag.system1.prompts import (
     RELEVANCE_INSTRUCTIONS,
     ROUTE_CRITERIA,
     ROUTE_INSTRUCTIONS,
+    SIGNALS_CONSISTENCY_CRITERIA,
+    SIGNALS_CONSISTENCY_INSTRUCTIONS,
+    SIGNALS_EVIDENCE_INSTRUCTIONS,
+    TURN_CONTEXT,
+    TURN_DEPTH_CRITERIA,
+    TURN_DEPTH_INSTRUCTIONS,
+    TURN_INJECTION_INSTRUCTIONS,
+    TURN_INTELLIGIBILITY_CRITERIA,
+    TURN_INTELLIGIBILITY_INSTRUCTIONS,
 )
 from agentic_jev_rag.system1.types import (
     GroundednessDecision,
     GuardrailDecision,
     RelevanceDecision,
     RouteDecision,
+    SignalsDecision,
     System1Error,
     System1TraceEntry,
+    TurnCheckDecision,
+    signals_outcome,
+    turn_label,
 )
 
 SYSTEM = "You make one fast, typed decision for a recruiting pipeline. Reply only with the JSON requested."
@@ -80,6 +93,46 @@ class LlmDecider:
             lambda a: "grounded" if a["grounded"] else "ungrounded",
         )
         return GroundednessDecision(bool(answer["grounded"]), float(answer["grounded"]), trace)
+
+    def turn_check(self, question: str, answer: str) -> TurnCheckDecision:
+        prompt = (
+            f"{TURN_CONTEXT}\n\nQuestion: {question}\n\nAnswer (speech-to-text transcript): {answer}\n\n"
+            f"intelligibility: {TURN_INTELLIGIBILITY_INSTRUCTIONS}\n{_options(TURN_INTELLIGIBILITY_CRITERIA)}\n\n"
+            f"injection: {TURN_INJECTION_INSTRUCTIONS}\n\n"
+            f"depth: {TURN_DEPTH_INSTRUCTIONS}\n{_options(TURN_DEPTH_CRITERIA)}"
+        )
+        schema = _object(
+            {
+                "intelligibility": {"type": "string", "enum": list(TURN_INTELLIGIBILITY_CRITERIA)},
+                "injection": {"type": "boolean"},
+                "depth": {"type": "string", "enum": list(TURN_DEPTH_CRITERIA)},
+            },
+            ["intelligibility", "injection", "depth"],
+        )
+        result, trace = self._ask(
+            "turn_check", prompt, schema, lambda a: turn_label(a["intelligibility"], float(a["injection"]), a["depth"])
+        )
+        return TurnCheckDecision(result["intelligibility"], float(result["injection"]), result["depth"], trace)
+
+    def interview_signals(self, answer: str, competencies: list[str], dossier: str) -> SignalsDecision:
+        listed = "\n".join(f"[{n}] {name}" for n, name in enumerate(competencies))
+        prompt = (
+            f"Candidate's interview answer: {answer}\n\nCandidate's Dossier:\n{dossier}\n\n"
+            f"evidence: {SIGNALS_EVIDENCE_INSTRUCTIONS} Return exactly {len(competencies)} booleans, one per competency "
+            f"in order:\n{listed}\n\nconsistency: {SIGNALS_CONSISTENCY_INSTRUCTIONS}\n{_options(SIGNALS_CONSISTENCY_CRITERIA)}"
+        )
+        schema = _object(
+            {
+                "evidence": {"type": "array", "items": {"type": "boolean"}},
+                "consistency": {"type": "string", "enum": list(SIGNALS_CONSISTENCY_CRITERIA)},
+            },
+            ["evidence", "consistency"],
+        )
+        result, trace = self._ask("interview_signals", prompt, schema, lambda a: a["consistency"])
+        judged = [bool(v) for v in result["evidence"]][: len(competencies)]
+        judged += [False] * (len(competencies) - len(judged))
+        evidence = {name: float(v) for name, v in zip(competencies, judged)}
+        return SignalsDecision(evidence, result["consistency"], _with_outcome(trace, signals_outcome(result["consistency"], evidence)))
 
     def _ask(self, decision: str, prompt: str, schema: dict, outcome) -> tuple[dict, System1TraceEntry]:
         completion = self._gateway.complete(

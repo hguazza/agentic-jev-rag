@@ -2,7 +2,9 @@
 
 from pathlib import Path
 
-from agentic_jev_rag.config import load_config
+import pytest
+
+from agentic_jev_rag.config import VoiceConfig, load_config
 
 RECRUITER = Path(__file__).parents[1] / "configs" / "recruiter.toml"
 
@@ -56,3 +58,66 @@ def test_settings_in_a_dotenv_file_are_honoured_when_running_on_the_host(tmp_pat
         assert load_config(RECRUITER).system_1 == "jev"
     finally:
         os.environ.pop("SYSTEM_1", None)
+
+
+MODELS_TOML = """
+[models]
+system_2_model = "a/s2"
+system_1_baseline = "a/s1"
+reference_judge = "b/judge"
+embedding_model = "c/embed"
+reranker = "d/rerank"
+jev_model = "typesafe/jev"
+voice_host = "a/host"
+"""
+
+
+def test_voice_settings_have_defaults_when_the_file_has_no_voice_table(tmp_path, monkeypatch):
+    monkeypatch.delenv("RECRUITER_URL", raising=False)
+    path = tmp_path / "config.toml"
+    path.write_text(MODELS_TOML)
+
+    config = load_config(path)
+
+    assert config.models.voice_host == "a/host"
+    assert config.voice == VoiceConfig()
+    assert config.voice.max_reprompts == 2 and config.voice.max_probes_per_topic == 2
+
+
+def test_voice_table_and_recruiter_url_override(tmp_path, monkeypatch):
+    path = tmp_path / "config.toml"
+    path.write_text(MODELS_TOML + '\n[voice]\nstt = "deepgram/nova-2"\ndefault_job_id = "J-001"\n')
+    monkeypatch.setenv("RECRUITER_URL", "http://recruiter:8001")
+
+    voice = load_config(path).voice
+
+    assert voice.stt == "deepgram/nova-2"
+    assert voice.default_job_id == "J-001"
+    assert voice.recruiter_url == "http://recruiter:8001"
+
+
+def test_aws_settings_can_come_from_the_environment(monkeypatch):
+    monkeypatch.setenv("QDRANT_API_KEY", "qdrant-secret")
+    monkeypatch.setenv("PERSISTENCE", "dynamodb")
+    monkeypatch.setenv("CHECKPOINT_TABLE", "swiftai-checkpoints")
+    monkeypatch.setenv("RUNS_TABLE", "swiftai-runs")
+    monkeypatch.setenv("DYNAMODB_ENDPOINT", "http://localhost:8002")
+    monkeypatch.setenv("RECRUITER_API_KEY", "api-secret")
+
+    config = load_config(RECRUITER)
+
+    assert config.qdrant_api_key == "qdrant-secret"
+    assert config.persistence == "dynamodb"
+    assert (config.checkpoint_table, config.runs_table) == ("swiftai-checkpoints", "swiftai-runs")
+    assert config.dynamodb_endpoint == "http://localhost:8002"
+    assert config.api_key == "api-secret"
+    assert "qdrant-secret" not in repr(config) and "api-secret" not in repr(config)
+
+
+def test_persistence_defaults_to_memory_and_rejects_unknown_backends(monkeypatch):
+    monkeypatch.delenv("PERSISTENCE", raising=False)
+    assert load_config(RECRUITER).persistence == "memory"
+
+    monkeypatch.setenv("PERSISTENCE", "redis")
+    with pytest.raises(ValueError, match="persistence"):
+        load_config(RECRUITER)

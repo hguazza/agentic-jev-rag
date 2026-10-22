@@ -1,4 +1,4 @@
-"""The four System 1 decisions, their typed outcomes and trace entries."""
+"""The System 1 decisions, their typed outcomes and trace entries."""
 
 from dataclasses import dataclass
 from typing import Literal, Protocol
@@ -49,6 +49,47 @@ class GroundednessDecision:
     trace: System1TraceEntry
 
 
+Intelligibility = Literal["answer", "unintelligible", "off_topic"]
+Depth = Literal["substantive", "shallow"]
+TURN_LABELS = ("substantive", "shallow", "unintelligible", "off_topic", "injection")
+INJECTION_THRESHOLD = 0.5
+
+
+def turn_label(intelligibility: str, injection: float, depth: str) -> str:
+    """The one outcome the interview acts on. A prompt injection outranks everything, so it is always flagged."""
+    if injection >= INJECTION_THRESHOLD:
+        return "injection"
+    if intelligibility != "answer":
+        return intelligibility
+    return depth
+
+
+@dataclass(frozen=True)
+class TurnCheckDecision:
+    intelligibility: Intelligibility
+    injection: float
+    depth: Depth
+    trace: System1TraceEntry
+
+    @property
+    def label(self) -> str:
+        return turn_label(self.intelligibility, self.injection, self.depth)
+
+
+Consistency = Literal["consistent", "adds", "contradicts"]
+
+
+def signals_outcome(consistency: str, evidence: dict[str, float]) -> str:
+    return f"{consistency}; evidence {sum(v >= 0.5 for v in evidence.values())}/{len(evidence)}"
+
+
+@dataclass(frozen=True)
+class SignalsDecision:
+    evidence: dict[str, float]  # competency → evidence score from 0 to 1
+    consistency: Consistency
+    trace: System1TraceEntry
+
+
 class System1Decider(Protocol):
     name: str
 
@@ -59,3 +100,7 @@ class System1Decider(Protocol):
     def input_guardrail(self, text: str) -> GuardrailDecision: ...
 
     def groundedness(self, claim: str, evidence: list[str]) -> GroundednessDecision: ...
+
+    def turn_check(self, question: str, answer: str) -> TurnCheckDecision: ...
+
+    def interview_signals(self, answer: str, competencies: list[str], dossier: str) -> SignalsDecision: ...

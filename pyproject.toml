@@ -12,6 +12,8 @@ dependencies = [
     "uvicorn[standard]>=0.50",
     "langgraph>=1.2,<1.3",
     "pydantic>=2.10",
+    "langgraph-checkpoint-aws>=1.2,<2",
+    "boto3>=1.40",
 ]
 
 [build-system]
@@ -21,6 +23,10 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "pytest>=8",
+]
+# The LiveKit voice worker (ADR 0012). Not in the default install or the Docker image: uv sync --group voice
+voice = [
+    "livekit-agents[openai,silero,turn-detector]==1.8.3",
 ]
 
 [tool.pytest.ini_options]

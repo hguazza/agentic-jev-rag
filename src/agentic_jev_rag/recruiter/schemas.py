@@ -8,6 +8,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from agentic_jev_rag.rag.models import TraceOut
+
 
 class ShortlistEntry(BaseModel):
     """A Candidate the Sourcer proposes for the Job."""
@@ -49,11 +51,69 @@ class ScreeningVerdict(BaseModel):
     summary: str = Field(description="A short, job-related summary of the verdict.")
 
 
+class TurnTiming(BaseModel):
+    """How the Candidate delivered one spoken answer, measured by the voice worker. Advisory only: never used in scores."""
+
+    response_latency_s: float | None = Field(
+        default=None, ge=0, description="Seconds from the end of the interviewer's speech to the start of the Candidate's."
+    )
+    answer_duration_s: float | None = Field(default=None, ge=0, description="Seconds from the start to the end of the Candidate's speech.")
+    words_per_minute: float | None = Field(default=None, ge=0, description="Speaking rate over the answer.")
+    filler_count: int | None = Field(default=None, ge=0, description="Filler words (um, uh, er, hmm) in the transcript.")
+
+
 class InterviewTurn(BaseModel):
     """One question and the Candidate's answer."""
 
     question: str = Field(description="The Interviewer's question.")
     answer: str = Field(description="The Candidate's answer (or the Simulated candidate's, in autonomous runs).")
+    kind: Literal["question", "probe", "reprompt", "redirect"] = Field(
+        default="question",
+        description="How the question was put: a new `question`, a `probe` (follow-up on a vague answer), a `reprompt` "
+        "(the previous reply could not be understood) or a `redirect` (the previous reply tried to instruct the AI).",
+    )
+    competency: str = Field(default="", description="The Scorecard competency the question assesses; empty for the opening question.")
+    check: str | None = Field(
+        default=None,
+        description="The Turn check outcome for the answer: `substantive`, `shallow`, `unintelligible`, `off_topic` or "
+        "`injection`. Null in simulated interviews.",
+    )
+    scored: bool = Field(
+        default=True, description="Whether the answer was used for scoring. Unintelligible, off-topic and injection replies are not."
+    )
+    timing: TurnTiming | None = Field(default=None, description="Delivery timing of a spoken answer; advisory only, never used in scores.")
+
+
+class RedFlag(BaseModel):
+    """Something in an interview that a human recruiter should look at."""
+
+    kind: Literal["injection", "contradiction"] = Field(
+        description="`injection`: the Candidate tried to instruct the AI interviewer. `contradiction`: an answer conflicts "
+        "with the Candidate's Dossier."
+    )
+    quote: str = Field(description="What the Candidate said.")
+    detail: str = Field(description="Why it was flagged; for a contradiction, what the Dossier says instead.")
+
+
+INTEGRITY_NOTE = (
+    "Advisory only, for human review. These timings never affect scores or the recommendation: long pauses and few "
+    "filler words are also common for non-native speakers, disabled and neurodivergent candidates, and careful thinkers."
+)
+
+
+class TurnIntegrity(BaseModel):
+    """Delivery timing for one spoken answer, with any advisory observation."""
+
+    turn: int = Field(description="The 1-based position of the answer in `turns`.")
+    timing: TurnTiming = Field(description="The measured timing.")
+    observation: str | None = Field(description="An advisory observation for a human reviewer, or null.")
+
+
+class IntegritySignals(BaseModel):
+    """Delivery timings from a voice interview, reported for human review and never used in scoring (ADR 0013)."""
+
+    note: str = Field(default=INTEGRITY_NOTE, description="How to read these signals.")
+    turns: list[TurnIntegrity] = Field(default_factory=list, description="One entry per answer with measured timing.")
 
 
 class InterviewAssessment(BaseModel):
@@ -68,15 +128,26 @@ class InterviewAssessment(BaseModel):
         "average is between 3 and 4; otherwise `no_hire`. A human recruiter reviews every recommendation."
     )
     summary: str = Field(description="A short summary of the interview.")
+    red_flags: list[RedFlag] = Field(default_factory=list, description="Things a human recruiter should look at, with quotes.")
+    probes_sustained: dict[str, int] = Field(
+        default_factory=dict,
+        description="Per probed competency, how many follow-up questions the Candidate answered with specifics. Live interviews only.",
+    )
+    integrity_signals: IntegritySignals | None = Field(
+        default=None, description="Advisory delivery timings from a voice interview; never used in the scores or the recommendation."
+    )
+    system_1_trace: list[TraceOut] = Field(
+        default_factory=list, description="Every System 1 decision made during a live interview, in order. Empty for simulated interviews."
+    )
 
 
 class ComplianceFinding(BaseModel):
     """The result of one Compliance check."""
 
-    check: Literal["input_guardrail", "consent", "groundedness", "policy"] = Field(
+    check: Literal["input_guardrail", "consent", "groundedness", "policy", "integrity"] = Field(
         description="`input_guardrail`: the goal was screened for discrimination and scope. `consent`: a shortlisted "
         "Candidate's Consent. `groundedness`: whether a Screening verdict is supported by its evidence. `policy`: a "
-        "policy requirement that applies to the results."
+        "policy requirement that applies to the results. `integrity`: that no delivery timing was cited in an interview's scores or recommendation."
     )
     subject: str = Field(description="What was checked: `goal`, a Candidate id, or a policy topic.", examples=["C-0040"])
     passed: bool = Field(description="Whether the check passed. A failed check needs human attention.")

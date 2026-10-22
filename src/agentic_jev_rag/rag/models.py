@@ -138,8 +138,8 @@ class AskRequest(BaseModel):
 class TraceOut(BaseModel):
     """One System 1 decision made while answering."""
 
-    decision: Literal["input_guardrail", "route", "chunk_relevance", "groundedness"] = Field(
-        description="Which System 1 decision this was."
+    decision: Literal["input_guardrail", "route", "chunk_relevance", "groundedness", "turn_check", "interview_signals"] = Field(
+        description="Which System 1 decision this was. `turn_check` and `interview_signals` are made only in live interviews."
     )
     outcome: str = Field(description="What was decided, e.g. `allowed`, `policies`, `kept 3/8`, `grounded`.", examples=["allowed"])
     latency_s: float = Field(description="End-to-end latency of the decision through OpenRouter, in seconds.", examples=[0.44])
