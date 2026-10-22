@@ -32,27 +32,19 @@
   "summary": "The candidate shows strong, concrete LangGraph multi-agent experience (parallel category agents, shared state, a critic that spawns retries, a deterministic scorer) and credible LLM-as-a-judge and model-cost work with numbers. The answers were rambling and often did not follow the STAR structure. Retrieval metrics were not recalled, RAG architecture detail was thin, and Python/FastAPI production engineering was not demonstrated. Scores of 4, 3, 2 and 3 average 3.0. Under the Interview Guide that is next_round, not hire, because the average is below 4 and Production engineering is below 3. The next round should probe FastAPI production practice (latency, testing, observability), retrieval metrics and the RAG design, and clarify the ECS-versus-Docker-Compose point. No protected characteristics were used. Four competency answers were given (A1-A4); the 'Answer 5' classifier signals have no matching transcript answer and the all-1.0 signals for A1-A3 were not relied on. A human recruiter should review.",
   "habits": [
     {
-      "habit": "Your longest answers ran very long. Question 1 took about 7.5 minutes and Question 3 about 8.7 minutes, so the key point can get buried. This is advisory only and did not affect your score.",
+      "habit": "Your longest answers were Q1 (447.5 s) and Q3 (523.45 s), roughly 7.5 and 8.7 minutes at a steady 102 and 89 words per minute. A slow, careful pace is fine and the timing did not affect your score. But answers this long make it harder for the interviewer to catch your main point, because the headline can get buried.",
       "turns": [
         1,
         3
       ],
-      "fix": "Open with a one-sentence headline answer, then give two supporting points, then stop and let the interviewer ask for more. Aim for about 2 minutes per answer. Keep any detail you add tied to your CV and project facts."
+      "fix": "Open with a one-sentence headline, such as what you built or decided and why it mattered. Then give two or three supporting points and stop. Aim for about 2 to 3 minutes and let the interviewer ask follow-ups. This keeps your careful thinking and makes it easier to follow."
     },
     {
-      "habit": "In Question 4 your first attempt was short (about 73 seconds) and fast (151 words per minute). You were then reprompted and needed a second, longer attempt of about 5 minutes. The fast start suggests you began before you had the question's focus clear.",
+      "habit": "On Q4 you needed a reprompt. Your first answer was short (72.71 s) and fast (151 words per minute). Your second was much longer (305.7 s) and slower (90.9 words per minute). The first pass may not have given the interviewer what they were looking for, so the full answer only came after they asked again.",
       "turns": [
         4
       ],
-      "fix": "Take a breath and restate the question in one sentence, for example 'You're asking how I evaluated retrieval quality.' Then answer that directly, so you get it right the first time."
-    },
-    {
-      "habit": "You sometimes stated deployment details more broadly than your own project supports, such as the ECS claim in the red flag below. That is a content risk, not a timing one. Slower stretches (about 89 to 91 words per minute in Questions 3 and 4) are fine and often reflect careful thinking. They do make it harder to check each claim as you go.",
-      "turns": [
-        3,
-        4
-      ],
-      "fix": "Before you name a tool or platform, ask yourself whether you actually ran it for this project. If you are unsure, describe what you did in plain words, for example 'I run it with Docker Compose.' Do not name the larger setup."
+      "fix": "Before you answer, take a breath and restate the question in one line, for example 'You're asking how I would evaluate retrieval quality.' Then give your direct answer first, at the steady pace you used in the second pass, and add one concrete example from your own work. This can save you the reprompt."
     }
   ],
   "red_flags": [
@@ -60,7 +52,7 @@
       "kind": "contradiction",
       "quote": "I deployed in Docker, and then it's in ECS as a micro service. Both the APIs are built.",
       "detail": "The Dossier says both APIs of the independent recruiting-agent project 'run in Docker Compose'. It describes ECS only for service endpoints in the Deep work. Deployment of the personal project on ECS is not supported by the Dossier.",
-      "say_instead": "I containerised both APIs with Docker, and they run together in Docker Compose. Say nothing about ECS for this project, because the Dossier does not support deploying it there."
+      "say_instead": "Say only what your Dossier supports: 'Both APIs in my independent recruiting-agent project run in Docker Compose.' Don't say the personal project runs on ECS. If you want to mention ECS, keep it separate and tie it to the service endpoints in your Deep work, where your Dossier describes it."
     }
   ],
   "debriefs": [
@@ -71,66 +63,63 @@
       "answers": [
         "Hi. I'm glad to be here. I'm so excited for this role. Yes. There are many projects, help me get to a point that it benefits my journey. Coming hard in micro one. And some of the projects are I have some multi agents behind Landgraf and calling AWS Bedrock. At These these agents would analyze like, huge transcription calls and each agent would be responsible for a category of items. So, basically, we have, like, five categories like, the compliance with data compliance, in which the person for call centers they they needed to do some some things to complete this item. Yeah. So I had, like, agents which were responsible for some categories. Which grouped some items and after that, another agent will carry the the results and we'll deliver, like, the final score from zero to a hundred And I also had LL. LLM as a judge. I had evals. To make sure the the the chunks of text the AI was using to justify this score I had some LLM as a judge to make sure this was really about the item each was describing and if we have some... If it was trustful What else? I also develop a live kit agent a voice agent. To which mimics a person So it had, like, a persona, It have, like, different triggers that would act different on the decisions it will make along the the conversation, right, along the the call. So... And different AI agents, which were mimicking bank clients Right? So the hero the real human is someone whom is someone who who calls to collect debt Right? So they are from, like, this this area of the bank, which, like, makes the call for persons... For people in that. And so, basically, he would get different types of client, and he would practice and he the monitoring and quality AI which were first used to monitor humans. It was also monitoring this this this worker of the client with the color And also it would have a coach Right? At the beginning, it was a coach, like, after the after the call. But with with decision models such as JAV, we were able to to qualify much faster and the was so much better to just give live hints Right? So throughout the call, the the seller gets some new recommendations of follow ups he can make. So it's very similar to a to a this agent here on micro one I hear the name is Zara. Where the agent itself have to has to response on different ways right, throughout the the call. And if the interview the interviewee such as myself here right now, you, the AI, should be able to respond on different ways, and take live decisions, right, not follow a script. So overall, I think that's what stands me for this position. Right? I have this these projects at deep that really talks to what we wanna wanna build here And what else is just look at this project I built right now, which is I built you, the AI that's interviewing me. I built an it is tightened to a length graph agents API which is behind an ECS Right? So I deployed in Docker, and then it's in ECS as a micro service. Both the APIs are built. Right? So there's an API which is for the interview, the recruiter, Right? So it runs the interview. We have the the interview end point, and we have the interview reply. Right, that it fetches, the question for us to reply. Besides in live kit where we try to give seamless the conversation. I'm talking too much right now. I will pass to you, but yeah, that's why I think I'm the most strongest fit. I also saw that you you you give extra points for candidates which want to deploy fast, want to experiment fast, And that's what I just showed here. This project. I have the evaluations. I have the comparisons for playing LLM to decision models such as JEV which is quite recent and shows that I'm always up to date. I'm always trying new things. I'm always experimenting, and I want to deploy as fast as possible. Right? I'm in a hurry. I want want people to be able to I want to make... I want to be able to make a difference as fast as possible in this field which is the recruitment field. And I want to do it with you, Macro One."
       ],
-      "looking_for": "The opening question tests relevance-filtered communication: can you pick your strongest, most role-relevant experience across LLM systems, retrieval and evaluation, production engineering and AWS delivery, and present it as a concise, structured pitch with evidence? It also tests whether you understand the role (autonomous AI recruiting agents) and can link your work to it without overclaiming.",
+      "looking_for": "This opening question tests concise, relevant self-positioning (communication and role-fit). The interviewer wants the two or three pieces of experience that map most directly to the scorecard (LLM agents and orchestration, RAG and evals, FastAPI services, AWS delivery), backed by evidence and delivered in a structured way, within about a minute or so.",
       "what_worked": [
         {
-          "point": "You named the right stack for the role right away: multi-agent LangGraph on Bedrock, which matches the LLM systems and cloud scorecard items.",
+          "point": "You led with experience that maps directly to the role: LangGraph multi-agent work on AWS Bedrock, which hits the LLM systems and cloud criteria in one sentence.",
           "quote": "I have some multi agents behind Landgraf and calling AWS Bedrock."
         },
         {
-          "point": "You included an evaluation story, which is a core scorecard area: an LLM-as-a-judge checking that the cited evidence really supports the score.",
+          "point": "You mentioned evaluation and LLM-as-a-judge to check that the cited text really supports the score. That is the retrieval-and-evaluation signal the role wants.",
           "quote": "I had some LLM as a judge to make sure this was really about the item each was describing"
         },
         {
-          "point": "You drew a direct line from your voice-agent work to what micro1 is building, showing you understand the product and the need for live, non-scripted decisions.",
+          "point": "You drew a clear parallel between your voice agent work and Zara: agents that respond live rather than follow a script. That shows you understand the product.",
           "quote": "you, the AI, should be able to respond on different ways, and take live decisions, right, not follow a script."
         },
         {
-          "point": "Building a recruiting agent of your own is a strong, relevant differentiator, and you tied it to the posting's emphasis on fast experimentation.",
-          "quote": "I built you, the AI that's interviewing me."
-        },
-        {
-          "point": "You showed model-selection discipline, comparing a decision model with a plain LLM rather than defaulting to one.",
-          "quote": "I have the comparisons for playing LLM to decision models such as JEV"
+          "point": "You tied your own recruiting-agent project to the role and to the posting's emphasis on shipping and experimenting fast, and you backed it with a model comparison.",
+          "quote": "I have the comparisons for playing LLM to decision models such as JEV which is quite recent"
         }
       ],
       "what_cost_points": [
         {
-          "point": "Your answer ran long and unstructured, with filler and self-interruption, so the strongest evidence got buried. You noticed it yourself but only near the end.",
-          "quote": "I'm talking too much right now."
-        },
-        {
-          "point": "There are almost no numbers. The CV has strong ones (5,000+ calls in 100 minutes, 90%+ accuracy, ~3.5x faster, ~20x cheaper), but none made it into your answer.",
-          "quote": "to analyze like, huge transcription calls"
-        },
-        {
-          "point": "The start was vague and spent time on enthusiasm rather than substance, which delays your first relevant fact.",
-          "quote": "There are many projects, help me get to a point that it benefits my journey."
-        },
-        {
-          "point": "This is a deployment claim the Dossier does not support. Your recruiting-agent project's two APIs run in Docker Compose; ECS appears in your Deep work, not in this project. An interviewer who checks the repo would find the mismatch.",
+          "point": "You stated a deployment fact the Dossier contradicts: your personal project runs both APIs in Docker Compose, and ECS is documented only for the Deep service endpoints. A recruiter checking the repo would catch this, and it damages trust in everything else you said.",
           "quote": "I deployed in Docker, and then it's in ECS as a micro service."
         },
         {
-          "point": "The Deep description was hard to follow: five categories, a score from zero to a hundred, and an unclear contrast with the debt-collection context. Imprecise terms like the garbled framework name weaken credibility.",
-          "quote": "we have, like, five categories like, the compliance with data compliance"
+          "point": "The answer was long and unstructured, with no clear sequence. The agent description, the voice agent and the personal project blurred together, and the key point arrived late.",
+          "quote": "What else? I also develop a live kit agent a voice agent."
         },
         {
-          "point": "The close leans on urgency and feeling rather than a concrete offer, which is weaker than naming what you would build for Zara.",
-          "quote": "I'm in a hurry. I want want people to be able to I want to make... I want to be able to make a difference"
+          "point": "There were no numbers anywhere. You have strong ones (5,000+ calls in 100 minutes, R$5M+ in fraud detected, 90%+ accuracy, Jev within 3 points of Haiku at ~3.5x faster and ~20x cheaper), and none of them were used.",
+          "quote": "we'll deliver, like, the final score from zero to a hundred"
+        },
+        {
+          "point": "Opening filler and enthusiasm with little content, plus vague phrasing, wasted the first seconds when the interviewer's attention is highest.",
+          "quote": "There are many projects, help me get to a point that it benefits my journey."
+        },
+        {
+          "point": "Self-aware but unplanned wrap-up: you flagged that you were talking too much and then kept going, and you closed on urgency rather than on a concrete contribution.",
+          "quote": "I'm talking too much right now. I will pass to you"
+        },
+        {
+          "point": "The claim of being the most up to date is an assertion rather than evidence, and the 'in a hurry' framing can sound like impatience rather than delivery discipline.",
+          "quote": "I'm in a hurry. I want want people to be able to I want to make..."
         }
       ],
-      "model_answer": "Thanks for having me. The experience most relevant to this role sits in three places. At Deep, I build LangGraph agents on AWS Bedrock for a top-3 Brazilian bank. I built a monitoring and quality agent that replaces human call evaluation with over 90% accuracy, plus an LLM-as-a-judge that catches hallucinations in its explanations. Eval benchmarks gate every deployment in our CI/CD. I also built TrainHub, a real-time LiveKit voice agent that role-plays clients, with tool calls into deterministic functions as guardrails. That is close to what Zara does: responding live, not following a script. Second, I choose models by measurement. I distilled Claude Sonnet into Qwen3-32B and kept about 90% of the score at 40x lower cost. Third, I built my own autonomous recruiting agent. A FastAPI and LangGraph Supervisor hands work to Sourcer, Screener, Interviewer and Compliance agents, which call a hybrid-search RAG service on Qdrant. A full run takes about 3 minutes and costs 38 cents. Both APIs run in Docker Compose, with 104 tests. In that project, Jev matched Claude Haiku 4.5 within 3 points while running about 3.5x faster and 20x cheaper. I would bring that same measured, fast-shipping approach to micro1.",
+      "model_answer": "The most relevant experience is the production agent work I do at Deep, a voice AI platform for call-center debt collection that we deliver for a top-3 Brazilian bank. There I build LangGraph multi-agent workflows on AWS Bedrock. One is a monitoring and quality agent that replaces human call evaluation with over 90% accuracy, with an LLM-as-a-judge that catches hallucinations in its explanations. Eval benchmarks gate every deployment in our CI/CD pipeline. I also built TrainHub, a real-time LiveKit voice agent that role-plays clients, using tool calling into deterministic functions as guardrails. That is close to what Zara does: responding live instead of following a script. Second, I built my own autonomous recruiting agent: a FastAPI and LangGraph Supervisor with Sourcer, Screener, Interviewer and Compliance agents, calling a hybrid-search RAG API on Qdrant through HTTP tools. Every screening verdict passes a groundedness check, and I have 104 tests. I benchmarked Jev against Claude Haiku 4.5 over 170 labelled examples: within 3 points, about 3.5x faster and 20x cheaper. Both APIs run in Docker Compose, and I would be glad to take that to production on AWS with you.",
       "facts_used": [
-        "CV: Deep - built a monitoring and quality agent that replaces human call evaluation with 90%+ accuracy, and an LLM-as-a-judge that catches hallucinations in the agent's explanations",
-        "CV: Bitbucket Pipelines CI/CD where eval benchmarks gate every deployment",
-        "CV: Built TrainHub, a real-time voice agent that role-plays clients (LiveKit, Deepgram, ElevenLabs), with tool calling into deterministic functions as guardrails",
-        "CV: LangGraph agents call models through Bedrock for a top-3 Brazilian bank",
-        "CV: distilled Claude Sonnet outputs into a fine-tuned Qwen3-32B reaching ~90% of Sonnet's score at 40x lower cost",
-        "CV Featured Project: Recruiter API (FastAPI and LangGraph) where a Supervisor hands work to Sourcer, Screener, Interviewer and Compliance agents",
-        "CV Featured Project: RAG API on Qdrant with hybrid retrieval; a full run takes about 3 minutes and costs $0.38",
-        "CV Featured Project: Jev matched Claude Haiku 4.5 within 3 points, ~3.5x faster and ~20x cheaper per decision",
-        "CV Featured Project: Both APIs run in Docker Compose; 104 tests at the public seams"
+        "Deep - Brazil, AI Engineer: voice AI platform for call-center debt collection, delivered for a top-3 Brazilian bank",
+        "Run the agents on AWS: LangGraph agents call models through Bedrock",
+        "Built a monitoring and quality agent that replaces human call evaluation with 90%+ accuracy ... an LLM-as-a-judge that catches hallucinations in the agent's explanations; ... eval benchmarks gate every deployment",
+        "Built TrainHub, a real-time voice agent that role-plays clients ... (LiveKit, Deepgram, ElevenLabs), with tool calling into deterministic functions as guardrails",
+        "Featured Project: Recruiter API (FastAPI and LangGraph) where a Supervisor hands work to Sourcer, Screener, Interviewer and Compliance agents; agents reach a separate RAG API only through HTTP tools",
+        "Built the RAG API on Qdrant: hybrid retrieval with dense and own sparse vectors fused with RRF",
+        "every screening verdict passes a groundedness check",
+        "Benchmarked ... over 170 hand-labelled examples: Jev matched Claude Haiku 4.5 within 3 points while running ~3.5x faster and ~20x cheaper per decision",
+        "Both APIs run in Docker Compose; a LiveKit voice agent drives the Interviewer API",
+        "104 tests at the public seams"
       ],
       "grounded": true
     },
@@ -141,51 +130,48 @@
       "answers": [
         "Oh, sure. So I was working for a third party but solving problems for one of the top three banks in Brazil, which is Bradesco. And so they had, like, they had, like, this problem. They have, like, the many call centers. And to... And the call center make calls on debt collection. Right? And first, there is a huge rotation in this field. Right? Rotation, like, for for the the call center workers. And what else is they usually go straight to business and start cold calling people, asking for money. And they much of the times, they don't even have, like, they they even forget the basic stuff, which is confirm... Confirming the the ID, Right? Following the the right protocols, to not leak, like, data on the transcription calls. Because if you are leaking if you're not... If you ask for, for example, for the full ID of the person or maybe the full name. This is gonna be stored as a... In the transcript. In a transcript, in a database somewhere. Then you you are going what is the word? You're not following the law. Right? In Brazil, we call it the LGBT."
       ],
-      "looking_for": "LLM systems: whether you can pick one multi-agent system you built and explain it end to end. That means the problem, your own role, how the agents were split, which tools they could call, how state moved between them, and the measurable result. The interviewer wants evidence of ownership and design judgment, not just context.",
+      "looking_for": "LLM systems depth: can you pick one multi-agent system, state your own role, and explain how the agents, the tools they call and the shared state were designed, then give a measurable result? It tests whether you can explain an architecture you own in a structured way.",
       "what_worked": [
         {
-          "point": "You started from a real business problem in a regulated setting, which is a good frame for an agent system.",
-          "quote": "they usually go straight to business and start cold calling people, asking for money."
+          "point": "You chose a real, high-stakes domain and tied it to compliance, which makes the problem feel concrete and credible.",
+          "quote": "Following the the right protocols, to not leak, like, data on the transcription calls."
         },
         {
-          "point": "You showed you understand the compliance risk behind the product: sensitive data ending up in stored transcripts. This is the kind of domain awareness that makes a guardrail design credible.",
-          "quote": "This is gonna be stored as a... In a transcript, in a database somewhere."
-        },
-        {
-          "point": "You gave concrete examples of what agents would need to check, such as ID confirmation and protocol adherence, so the listener can see what the scoring is for.",
-          "quote": "they even forget the basic stuff, which is confirm... Confirming the the ID"
+          "point": "You spotted a specific data-protection risk (personal data persisting in transcripts). This shows you think about guardrails, not just features.",
+          "quote": "This is gonna be stored as a... In the transcript. In a transcript, in a database somewhere."
         }
       ],
       "what_cost_points": [
         {
-          "point": "The whole answer was setup. You never reached your role, the agent design, the tools, the state passing or the result, which were the four things the question asked for. In a 60 to 90 second window, the problem should take about 15 seconds.",
+          "point": "The answer stops at the problem. There is no role, no agent design, no tools, no state passing and no result, so most of what the question asked for is missing. Your design details came in other answers, but this one never got there.",
           "quote": "Then you you are going what is the word? You're not following the law."
         },
         {
-          "point": "Your role was buried and unclear. 'Working for a third party' is the only hint, and you never said 'I built X'. The interviewer cannot credit you with ownership.",
+          "point": "Your role is blurred. 'Third party' and 'solving problems for' do not say what you personally built, and the system is never named (call-quality scoring agents or TrainHub).",
           "quote": "I was working for a third party but solving problems for one of the top three banks in Brazil"
         },
         {
-          "point": "You spent time on call-center rotation, which is background that does not help explain the system you designed.",
-          "quote": "First, there is a huge rotation in this field. Right? Rotation, like, for for the the call center workers."
+          "point": "Too much time went on background about the industry (staff turnover, cold-calling habits) before any engineering.",
+          "quote": "First, there is a huge rotation in this field. Right?"
         },
         {
-          "point": "Fillers and restarts made the answer hard to follow. They also made it sound as if you were searching for the structure while talking.",
-          "quote": "And so they had, like, they had, like, this problem."
-        },
-        {
-          "point": "You slipped on the key term. The law is the LGPD, and saying 'LGBT' can distract or embarrass you in front of a client-facing audience. You also named the client unprompted, which you may not want to do.",
+          "point": "A slip on the key term: the Brazilian data protection law is the LGPD. Getting it wrong, or hunting for the word, weakens the compliance point you were making.",
           "quote": "In Brazil, we call it the LGBT."
+        },
+        {
+          "point": "Filler and restarts make the answer hard to follow and hide the substance.",
+          "quote": "they had, like, they had, like, this problem. They have, like, the many call centers."
         }
       ],
-      "model_answer": "At Deep, we build a voice AI platform for call-center debt collection, delivered for a top-3 Brazilian bank. The problem was that call quality was evaluated by humans. I built the monitoring and quality agent that replaces that human evaluation, and I owned it end to end. It is a multi-agent system in LangGraph. I built state graphs with parallel agents sharing state in a fan-out and fan-in pattern, so several agents work on the same call at once and their outputs come back together in one place. The agents call models through Bedrock, behind a LiteLLM gateway we deploy ourselves on EC2. In the same stack, TrainHub, our real-time voice agent, uses tool calling into deterministic functions as guardrails, so the negotiation math is never left to the model. I also added an LLM-as-a-judge that catches hallucinations in the agent's explanations, and I set up Bitbucket Pipelines so eval benchmarks gate every deployment. The result is 90%+ accuracy replacing human call evaluation, and a multi-agent system that accelerates evaluations.",
+      "model_answer": "At Deep, I work on a voice AI platform for call-center debt collection, delivered for a top-3 Brazilian bank. I built the monitoring and quality agent that replaces human call evaluation, and I owned it end to end. Compliance mattered from day one, including LGPD, because personal data must not leak into transcripts.\n\nI designed it as a LangGraph state graph with fan-out and fan-in: parallel agents each handle part of the evaluation, share state, and their results are brought back together at the end. The agents call models through Bedrock. I used tool calling into deterministic functions as guardrails, so the parts that must be exact do not rely on the model's judgment, and outputs are structured with Pydantic.\n\nTo make it trustworthy, I added an LLM-as-a-judge that catches hallucinations in the agent's explanations. I also set up Bitbucket Pipelines CI/CD so eval benchmarks gate every deployment.\n\nThe result is a system that replaces human call evaluation with 90%+ accuracy, and the multi-agent design accelerates evaluations. Around it I implemented guardrails for prompt injection, PII masking, LGPD and audit logging.",
       "facts_used": [
-        "CV: Deep, voice AI platform for call-center debt collection, delivered for a top-3 Brazilian bank.",
-        "CV: Built a monitoring and quality agent that replaces human call evaluation with 90%+ accuracy, a multi-agent system that accelerates evaluations, and an LLM-as-a-judge that catches hallucinations in the agent's explanations.",
-        "CV: set up Bitbucket Pipelines CI/CD where eval benchmarks gate every deployment.",
-        "CV: Built LangGraph state graphs with parallel agents sharing state (fan-out/fan-in).",
-        "CV: LangGraph agents call models through Bedrock, a self-deployed LiteLLM gateway runs on EC2.",
-        "CV: Built TrainHub, a real-time voice agent ... with tool calling into deterministic functions as guardrails for negotiation math."
+        "CV: Built a monitoring and quality agent that replaces human call evaluation with 90%+ accuracy, a multi-agent system that accelerates evaluations, and an LLM-as-a-judge that catches hallucinations in the agent's explanations",
+        "CV: set up Bitbucket Pipelines CI/CD where eval benchmarks gate every deployment",
+        "CV: Built LangGraph state graphs with parallel agents sharing state (fan-out/fan-in)",
+        "CV: LangGraph agents call models through Bedrock",
+        "CV: tool calling with deterministic guardrails, structured outputs (Pydantic)",
+        "CV: implemented guardrails (prompt injection, PII masking, LGPD, audit logging)",
+        "CV: Voice AI platform for call-center debt collection, delivered for a top-3 Brazilian bank"
       ],
       "grounded": true
     },
@@ -196,58 +182,60 @@
       "answers": [
         "Yeah. So, basically, the... You have the rotation. You have the the call center workers. Going straight to cold call and not following the most basic stuff which is confirming, like, ID sometimes. My role so, basically, my role were just to create this monitoring and quality agent because Bradesco and any any enterprise with huge call centers with huge cost... Customer support. Or debt collection. Right? Right. So the agent had access to the transcript and to the vectorized transcript And it could find and we have one agent, like, for a specific for a specific area. So, like, governance and data and compliance, maybe negotiation queues, maybe closing the deal, maybe King just playing the right information the client needed So, yeah, so I created five of these agents, and they would go in parallel searching for chunks, for text, which were relevant to to answer to really score, right, to score to give, like, foundation to what you are scouring. Right? What you're giving scour to And I also had after they run-in parallel, oh, and to begin with, I had one agent that just understand if it's a if if it was a active call, we could be if they were receiving or which were receiving the call. Right? Because someone in the call center can receive a call. Or if they were the the one doing the call. And some... So some other classification and some classification agent, which got got some metadata before the the other agents start to they they began with. And after the they analyzed, I had another agent were the one responsible for they're responsible for consolidating right, all the content. And criticizing trying to see if, uh, a agent got something wrong, and it could spin and agent if if defined contradictory statements. Would spin another sub agent to try again just for that group of items. Right? Like, just that that specific agent And yeah, then I had, like, an deterministic agent to sum up all these course. And to give scores, right, So it was just, like, zero or one. It either did what that item requested or it didn't. And, basically, on the zero and one, the tell deterministic one would would sum, you know, right, the the final point. Yeah. That's one of the moody agents. I also had one for fraud detection. Also for call centers. Because many call centers when they are... The the contract is is close to an end, and they meet the the goals. Right? The yeah. Their their their goals, like, their minimum that they had to reach to to be able to redo the contract. Right? To make the to make the counter again. And then they started to to pretend they are closing deals, and they put in the system that it was a closed deal. By text, you can see it wasn't And so they came here came with this problem, and I realized I could easily easily make an agent upon, like, upon elastic and and cadrant, which could find proofs, right, that the the client was not accepting the deal. It it was not a close due. And before, that was, like, if you if you had, like, six hour call six thousand hour in calls, for only one EPS for one data center, then you needed six thousand hour human hours to listen to all the other. And then with the... I created some mood agents with follow, like, exact the the the last almost like the last problem, which they separately, like, three different way agents try to find some specific behaviors. They were specialists in one behavior. One of the bad behavior is the operation. The operator call center operator, who like, what one way he could the behaviors, he could act like. And then another agent to try and grab the behavior of the the behavior of the the client itself, right, which was, like, refusing the due or anything like that. Yes. Yes. So, basically, these were my agents. There were a couple more that I can talk about, but I think I talked in the about this one. If you want to know more about the others, you can Yes. I actually shared shared a state dict. Right? So basically, the states could be what was the item What was the chunk or the the the the relevant chunk it found and maybe some some more metadata on this specific item. Well, it was huge for them Actually, they already had, like, another EPS another third party that offers offered this job for them."
       ],
-      "looking_for": "LLM systems competency: can you explain, as the owner, how a multi-agent system was built (agent roles, tools, how state moves between agents) and back it with a measurable result? The interviewer wanted personal ownership, design clarity and an outcome, not just the problem statement.",
+      "looking_for": "LLM systems competency: can you explain, as the person who built it, how a multi-agent system was designed, what tools the agents could call, how state moved between them, and what it measurably delivered? The interviewer wanted ownership, architecture and an outcome in one tight story.",
       "what_worked": [
         {
-          "point": "You claimed ownership clearly and tied the work to a real customer context.",
+          "point": "You named your role clearly and tied it to a business problem, so the interviewer knew the build was yours.",
           "quote": "my role were just to create this monitoring and quality agent"
         },
         {
-          "point": "The design was concrete: specialist agents split by area and run in parallel over retrieved chunks.",
+          "point": "Your parallel fan-out design was concrete: specialised agents each retrieving evidence for their own area.",
           "quote": "I created five of these agents, and they would go in parallel searching for chunks"
         },
         {
-          "point": "The self-correcting consolidation step shows real orchestration thinking: a critic that re-runs only the disputed items.",
-          "quote": "Would spin another sub agent to try again just for that group of items"
+          "point": "You described a consolidation step with self-correction, which shows real orchestration thinking.",
+          "quote": "it could spin and agent if if defined contradictory statements"
         },
         {
-          "point": "Deterministic scoring after the LLM stage is a good engineering choice, and you explained why it is simple and auditable.",
+          "point": "The deterministic scoring layer was a strong design choice: the LLMs judge items and plain code sums the score.",
           "quote": "it was just, like, zero or one. It either did what that item requested or it didn't"
         },
         {
-          "point": "You did answer the state question directly and named what the state holds.",
+          "point": "You answered the state question directly and specifically, naming what the state held.",
           "quote": "I actually shared shared a state dict"
         }
       ],
       "what_cost_points": [
         {
-          "point": "The measurable result, the last part of the question, was missing. You ended on a vague line and never gave the 90%+ accuracy or the time saved.",
+          "point": "The measurable result, the last thing the interviewer asked for, never arrived. You gave a vague impression and a side comment instead of a number. Your CV has 90%+ accuracy, and the answer never said it.",
           "quote": "Well, it was huge for them"
         },
         {
-          "point": "The tools question got a thin answer. 'Access to the transcript' does not say which tools or retrieval calls the agents could make, or how they were typed or validated.",
+          "point": "The tools question went unanswered. 'Access to the transcript' describes data, not callable tools, and no framework (LangGraph) was named.",
           "quote": "the agent had access to the transcript and to the vectorized transcript"
         },
         {
-          "point": "The answer drifted into the fraud-detection system for several minutes, which buried the call-quality design the interviewer asked about.",
-          "quote": "I also had one for fraud detection. Also for call centers."
+          "point": "The structure was hard to follow. You corrected the order mid-answer and filler broke up the architecture, so the interviewer had to reassemble the pipeline.",
+          "quote": "oh, and to begin with, I had one agent that just understand"
         },
         {
-          "point": "Rambling delivery and filler made the structure hard to follow. The state answer came last, as an afterthought.",
-          "quote": "Yes. Yes. So, basically, these were my agents. There were a couple more that I can talk about"
+          "point": "You spent a lot of time on the fraud system and left the question's quality agent half-finished. You then offered more agents instead of closing the point.",
+          "quote": "There were a couple more that I can talk about"
         },
         {
-          "point": "Ending on the bank's existing third-party vendor weakened the result and left the interviewer with no number.",
-          "quote": "they already had, like, another EPS another third party that offers offered this job for them"
+          "point": "State passing, a core part of the question, came as an afterthought at the very end of the answer rather than as part of the design.",
+          "quote": "Yes. Yes. So, basically, these were my agents."
         }
       ],
-      "model_answer": "At Deep, for a top-3 Brazilian bank's call-center debt collection, I built the monitoring and quality agent that replaces human call evaluation. It is a multi-agent system in LangGraph. I built state graphs with parallel agents in a fan-out/fan-in shape that share state, which is how the system accelerates evaluations compared with a sequential pass. Around it I built RAG on Qdrant with hybrid search and reranking, evaluated with RAGAS, so retrieval quality is measured, not assumed. Because a score nobody trusts is useless, I also built an LLM-as-a-judge that catches hallucinations in the agent's explanations. On tools, my clearest example is TrainHub, our real-time voice agent, where tool calling into deterministic functions acts as a guardrail for negotiation math. For the result, the quality agent reaches 90%+ accuracy while replacing human call evaluation. I also set up Bitbucket Pipelines CI/CD so that eval benchmarks gate every deployment, which means a regression can't ship quietly. It all runs on AWS, with the LangGraph agents calling models through Bedrock.",
+      "model_answer": "At Deep, I built the monitoring and quality agent for a top-3 Brazilian bank's call-center debt collection. It replaces human call evaluation with 90%+ accuracy. I built it as a LangGraph state graph with parallel agents that fan out over the call and fan back in, sharing state, which is what accelerates evaluations. Retrieval runs on Qdrant with hybrid search and reranking, evaluated with RAGAS. To keep the scores trustworthy, I added an LLM-as-a-judge that catches hallucinations in the agent's explanations. I also set up Bitbucket Pipelines CI/CD so eval benchmarks gate every deployment. A second system I built is a fraud detection agent system on Elasticsearch, using asyncio with semaphore-bounded concurrency. It analyzed 5,000+ calls in 100 minutes and detected R$5M+ in fraud, replacing manual analysis. Everything runs on AWS, with the LangGraph agents calling models through Bedrock. So the result is evaluation at 90%+ accuracy, fraud found at a scale manual review could not reach, and no release goes out unless it passes the benchmarks.",
       "facts_used": [
-        "Built a monitoring and quality agent that replaces human call evaluation with 90%+ accuracy, a multi-agent system that accelerates evaluations, and an LLM-as-a-judge that catches hallucinations in the agent's explanations; set up Bitbucket Pipelines CI/CD where eval benchmarks gate every deployment.",
-        "Built LangGraph state graphs with parallel agents sharing state (fan-out/fan-in); built RAG on Qdrant with hybrid search and reranking, evaluated with RAGAS",
-        "Built TrainHub, a real-time voice agent that role-plays clients to score and train new operators (LiveKit, Deepgram, ElevenLabs), with tool calling into deterministic functions as guardrails for negotiation math.",
-        "Run the agents on AWS: LangGraph agents call models through Bedrock",
-        "Voice AI platform for call-center debt collection, delivered for a top-3 Brazilian bank."
+        "CV: Built a monitoring and quality agent that replaces human call evaluation with 90%+ accuracy, a multi-agent system that accelerates evaluations, and an LLM-as-a-judge that catches hallucinations in the agent's explanations",
+        "CV: set up Bitbucket Pipelines CI/CD where eval benchmarks gate every deployment",
+        "CV: Built LangGraph state graphs with parallel agents sharing state (fan-out/fan-in)",
+        "CV: built RAG on Qdrant with hybrid search and reranking, evaluated with RAGAS",
+        "CV: Built a fraud detection agent system on Elasticsearch with asyncio and semaphore-bounded concurrency: 5,000+ calls analyzed in 100 minutes, R$5M+ in fraud detected, replacing manual analysis",
+        "CV: Run the agents on AWS: LangGraph agents call models through Bedrock",
+        "CV: Voice AI platform for call-center debt collection, delivered for a top-3 Brazilian bank"
       ],
       "grounded": true
     },
@@ -259,89 +247,89 @@
         "Which was already saving so many human hours Right? Because before, they had real humans to monitor and quality... And were expensive deals that this go ahead to make with them. So they obviously still have and still had human another third party, another EPS that worked for them. Which were just specialized on listening Right? They they had real humans to listen. And the same the same company was trying to create this agents. To monitor and quality... For monitoring quality. But we actually we were... So we were in how can I say? I I forgot the I forgot the right term. In English, but it is basically when two companies are competing against each other on the matter, and more than a park. Right? It's more than a proof of concept. This period had passed so it was two companies trying to prove each other. And they had some problems with the other APS, and I'm happy to to say that we were the one they chose to go with after some months of competing and comparing and showing results.",
         "So the reg system I built was for illegal a legal project Legal is a platform where we where we basically give the whole view of a legal department inside a company. So so in this platform, we... They wanted to be able to talk to some some of the process. Right? And try to ask They wanted to ask questions about the project and create minutas and be able... And so we had, like, a chunks The... An agent could a NGT reg who trying to find yeah. So, basically, uh, LLM as a judge, uh, we created one for assertiveness. Right? Basically, the same as... Same concept I already talked about So it's you create an agent. You try to make it explainable. Right? So direct agent try to explain where you get the chunk from. What was the relevance, and then you have an LLM as just to try and give assertiveness. Having this makes all all the change because you can test different models. You can see which ones are hallucinating more. And I don't I don't recall, like, recall k but I know for sure it help us, uh, decide which models we wanted to run, which were which one was the most cost efficient. Right? Which was we keep hallucination. Low and... While guaranteeing assertiveness of the of the whole project. Yeah. Sure. So it was basically that. Right? We had, like, two different hallucinations percentage. So when we use it, for example, Sony, it was the four point five at the time But I remember Sunnett had a much lower hallucinate... Hallucination rate. So it was, like, less than I think it was seven percent, the right number. But when we went to Haiku for something like Haiku, we had, like, some twenty twenty something hallucination percentage These also let us to try and desolate the answers first from some better from some better models So maybe, like, trying Opus and getting the answers and the explainability they had and then, uh, fine tuning his mother's, such as Haiku or Pwen that twenty seven... The queen tree, twenty seven billion parameters. And having, like, the same results for a much lower price. Yeah. Don't know if I answered. I wish you knew ask. But I'm kinda lost in this huge explanation If you want to clear something out, you can ask. Yeah. Sure. So basically, from twenty something, hallucination rate, which which we had, like, twenty five, I think it was. Let... Let's put it this way. And Sonay had, like, a seven percent. And so we reached basically, like, nine, ten percent hallucination rate. Much closer to Sunnip even though it were using Haiku. Like, it was much cheaper. Three times cheaper at the time."
       ],
-      "looking_for": "Retrieval and evaluation: can you describe one RAG system you built (problem, your role, architecture), show how you measured retrieval quality and answer quality with labelled sets, recall@k or an LLM-as-a-judge, and say what changed because of those measurements, with numbers. The question tests rigour in evaluation and the ability to explain it clearly.",
+      "looking_for": "Whether you can describe one RAG system end to end: the problem, your own build (hybrid search, reranking, vector DB), how you measured retrieval and answer quality with labelled sets and metrics such as recall@k, and what changed in numbers. This is the Retrieval and evaluation competency: deterministic, measurable evaluation that drives engineering decisions.",
       "what_worked": [
         {
-          "point": "You gave concrete numbers tied to a decision. Hallucination rates for different models showed the judge was driving model choice, which is the outcome the question asked for.",
-          "quote": "Sonnet had a much lower hallucination rate. So it was, like, less than I think it was seven percent... Haiku, we had, like, some twenty something hallucination percentage"
+          "point": "You gave a real evaluation story with numbers: a judge-based hallucination rate compared across models, which is the kind of measurement-driven decision-making this role wants.",
+          "quote": "Sonnet had a much lower hallucination rate. So it was, like, less than I think it was seven percent"
         },
         {
-          "point": "You showed a real result from your measurement: a cheaper fine-tuned model closing most of the gap to a stronger one, with a cost figure. This is the kind of evidence-based model selection the role values.",
-          "quote": "nine, ten percent hallucination rate. Much closer to Sonnet even though it were using Haiku... Three times cheaper at the time."
+          "point": "You tied the measurement to a concrete decision about cost and quality. The distillation outcome (Haiku-class model near Sonnet, much cheaper) shows evals changed what you shipped.",
+          "quote": "having, like, the same results for a much lower price"
         },
         {
-          "point": "You explained why the judge was built to be explainable: the agent says where each chunk came from and how relevant it was, so the judge can score it. That is a sound design idea.",
-          "quote": "You try to make it explainable. Right? So direct agent try to explain where you get the chunk from. What was the relevance"
+          "point": "You made the LLM-as-a-judge explainable by asking the agent to cite the source chunk and its relevance, which is a sound design instinct.",
+          "quote": "try to explain where you get the chunk from. What was the relevance"
         },
         {
-          "point": "You were honest about what you did not remember rather than inventing it.",
-          "quote": "I don't recall, like, recall k"
+          "point": "You were honest about what you did not remember rather than inventing a figure.",
+          "quote": "I don't I don't recall, like, recall k"
         }
       ],
       "what_cost_points": [
         {
-          "point": "You opened with the problem, but it was the wrong system. The first part is about a competition between vendors, not a RAG system, and the legal-platform framing that followed was muddled. The interviewer could not tell what problem the RAG system solved or what you personally built.",
-          "quote": "They wanted to ask questions about the project and create minutas and be able... And so we had, like, a chunks"
+          "point": "You never described the retrieval side: no hybrid search, no Qdrant, no reranking, no chunking. The interviewer offered Qdrant hybrid search as the example and you did not take it.",
+          "quote": "we had, like, a chunks The... An agent could a NGT reg who trying to find yeah."
         },
         {
-          "point": "No retrieval metrics. The question asked about retrieval quality, and you said you could not recall recall@k. Your CV lists recall@k, MRR and RAGAS, so the interviewer saw a gap between the CV and the answer.",
-          "quote": "I don't I don't recall, like, recall k but I know for sure it help us"
+          "point": "Saying you do not recall recall@k, with nothing else on retrieval metrics, left the retrieval half of the question unanswered. Your CV lists recall@k, MRR and RAGAS, so the gap reads as a mismatch with your CV.",
+          "quote": "I don't recall, like, recall k"
         },
         {
-          "point": "No architecture. You never said Qdrant, hybrid search, RRF or reranking, so the interviewer could not see what you built. You also did not say what your labelled data or harness looked like.",
-          "quote": "An agent could a NGT reg who trying to find yeah."
+          "point": "The problem statement was vague and the structure wandered. You never said what you personally built, and your numbers came out in a muddle (twenty, twenty-five, seven, nine, ten) with several restarts.",
+          "quote": "I'm kinda lost in this huge explanation"
         },
         {
-          "point": "Signs of losing the thread undermined the answer. Admitting you were lost and handing the structure back to the interviewer made a partly good answer sound unsure.",
-          "quote": "But I'm kinda lost in this huge explanation If you want to clear something out, you can ask."
+          "point": "Your answer 'assertiveness' is a vague term, and no labelled set or deterministic harness was mentioned, so the interviewer could not tell how reliable the judge was.",
+          "quote": "we created one for assertiveness"
         },
         {
-          "point": "The numbers shifted as you spoke, and the terms were loose ('assertiveness', 'I think it was'). Without a stated sample or method, the figures were hard to trust.",
-          "quote": "which we had, like, twenty five, I think it was. Let... Let's put it this way."
+          "point": "Handing the structure back to the interviewer undercuts confidence. Better to close on a one-line result.",
+          "quote": "If you want to clear something out, you can ask."
         }
       ],
-      "model_answer": "The system I'll describe is the RAG I built at Deep on Qdrant, with hybrid search and reranking. I built it myself, and it sat inside our LangGraph agents. I evaluated it with RAGAS. For answer quality, I built an LLM-as-a-judge that catches hallucinations in the agent's explanations, so each answer could be checked against the evidence it cited. Those eval benchmarks gate every deployment in our Bitbucket Pipelines CI/CD, so a change that lowers quality does not ship. The measurements also drove a model decision. I distilled Claude Sonnet's outputs into a fine-tuned Qwen3-32B, and it reached about 90% of Sonnet's score at 40x lower cost. In a separate project, I hand-labelled 170 examples and benchmarked four pipeline decisions: routing, chunk relevance, input guardrail and groundedness. There, a specialised decision model matched Claude Haiku 4.5 within 3 points, about 3.5x faster and about 20x cheaper. What I would improve is how I report retrieval metrics such as recall@k and MRR next to the judge scores, so retrieval and generation are tracked separately.",
+      "model_answer": "The system I'll describe is the RAG I built at Deep on Qdrant, with hybrid search and reranking. I built it, and I evaluated it with RAGAS. Separately, we had an LLM-as-a-judge that catches hallucinations in our agents' explanations, and I'll be straight that I don't have the recall@k figures in my head from that project. What I can give you is how the evaluation drove decisions. We used the judge to compare models on hallucination rate and cost. Sonnet was around 7 percent, while Haiku was in the 20 to 25 percent range. So instead of paying for Sonnet everywhere, I distilled Claude Sonnet's outputs into a fine-tuned Qwen3-32B. It reached about 90 percent of Sonnet's score at 40 times lower cost. And because eval benchmarks gate every deployment in our Bitbucket Pipelines CI/CD, a regression can't ship unnoticed. For retrieval metrics specifically, in my independent recruiting project I benchmarked the pipeline's decisions, including chunk relevance, over 170 hand-labelled examples, and I'd bring that same labelled-set discipline, with recall@k and MRR, to any new RAG system.",
       "facts_used": [
-        "Built RAG on Qdrant with hybrid search and reranking, evaluated with RAGAS (Deep)",
-        "LLM-as-a-judge that catches hallucinations in the agent's explanations (Deep)",
-        "Bitbucket Pipelines CI/CD where eval benchmarks gate every deployment (Deep)",
-        "Distilled Claude Sonnet outputs into a fine-tuned Qwen3-32B reaching ~90% of Sonnet's score at 40x lower cost (Deep)",
-        "Benchmarked four fast decisions (routing, chunk relevance, input guardrail, groundedness) over 170 hand-labelled examples (Featured Project)",
-        "Jev matched Claude Haiku 4.5 within 3 points, ~3.5x faster (p50 0.44s vs 1.6s) and ~20x cheaper per decision (Featured Project)",
-        "Core Competencies: retrieval metrics (recall@k, MRR), labelled sets, LLM-as-a-judge"
+        "Built RAG on Qdrant with hybrid search and reranking, evaluated with RAGAS (CV, Deep)",
+        "LLM-as-a-judge that catches hallucinations in the agent's explanations (CV, Deep)",
+        "eval benchmarks gate every deployment via Bitbucket Pipelines CI/CD (CV, Deep)",
+        "distilled Claude Sonnet outputs into a fine-tuned Qwen3-32B reaching ~90% of Sonnet's score at 40x lower cost (CV, Deep)",
+        "Benchmarked the pipeline's four fast decisions (routing, chunk relevance, input guardrail, groundedness) over 170 hand-labelled examples (CV, Featured Project)",
+        "Core Competencies: labelled sets, retrieval metrics (recall@k, MRR) (CV)",
+        "Sonnet about 7% and Haiku about 20-25% hallucination rate (stated by the candidate in the interview, scored by the interviewer)"
       ],
       "grounded": true
     }
   ],
   "system_1": "llm",
-  "cost_usd": 0.17810200000000004,
+  "cost_usd": 0.17497800000000002,
   "trace": [
     {
       "decision": "groundedness",
       "outcome": "grounded",
-      "latency_s": 1.688072207965888,
-      "cost_usd": 0.003356,
+      "latency_s": 2.1199694580282085,
+      "cost_usd": 0.003003,
       "implementation": "llm"
     },
     {
       "decision": "groundedness",
       "outcome": "grounded",
-      "latency_s": 1.7436910000396892,
-      "cost_usd": 0.003157,
+      "latency_s": 1.7148664579726756,
+      "cost_usd": 0.00298,
       "implementation": "llm"
     },
     {
       "decision": "groundedness",
       "outcome": "grounded",
-      "latency_s": 4.401595625036862,
-      "cost_usd": 0.003188,
+      "latency_s": 1.3233676250092685,
+      "cost_usd": 0.002965,
       "implementation": "llm"
     },
     {
       "decision": "groundedness",
       "outcome": "grounded",
-      "latency_s": 1.5280144999851473,
-      "cost_usd": 0.003239,
+      "latency_s": 1.418344458041247,
+      "cost_usd": 0.002998,
       "implementation": "llm"
     }
   ]
