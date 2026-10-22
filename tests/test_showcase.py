@@ -68,3 +68,18 @@ def test_the_leaderboard_sorts_by_interview_then_screening_score(recruiter_conte
     ordered = [r.candidate_id for r in leaderboard(Showcase("J-001", "C-005", "llm", rows))]
 
     assert ordered[:2] in (["C-002", "C-005"], ["C-005", "C-002"]) and ordered[-1] == "C-003"
+
+
+COACHING_LINK = "The author's interview coaching: [coaching.md](coaching.md)"
+
+
+def test_the_report_links_the_coaching_only_when_it_exists(tmp_path):
+    showcase = Showcase("J-061", "C-0213", "llm", [])
+
+    write_outputs(showcase, tmp_path)
+    assert COACHING_LINK not in (tmp_path / "report.md").read_text(encoding="utf-8")
+
+    (tmp_path / "coaching.md").write_text("# Interview coaching\n", encoding="utf-8")
+    write_outputs(showcase, tmp_path)
+    assert COACHING_LINK in (tmp_path / "report.md").read_text(encoding="utf-8")
+    assert render_report(showcase, coaching=True) == (tmp_path / "report.md").read_text(encoding="utf-8")

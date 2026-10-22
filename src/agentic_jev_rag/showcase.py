@@ -67,7 +67,7 @@ def leaderboard(showcase: Showcase) -> list[Row]:
     return sorted(showcase.rows, key=key, reverse=True)
 
 
-def render_report(showcase: Showcase) -> str:
+def render_report(showcase: Showcase, *, coaching: bool = False) -> str:
     lines = [
         f"# AI engineer showcase: {showcase.job_id}",
         "",
@@ -84,6 +84,8 @@ def render_report(showcase: Showcase) -> str:
         interview = f"{average(row.assessment.scores):.1f}" if row.assessment else "not interviewed"
         recommendation = row.assessment.recommendation if row.assessment else "—"
         lines.append(f"| {n} | {name} | {row.tier} | {match} | {screening} | {interview} | {recommendation} |")
+    if coaching:
+        lines += ["", "The author's interview coaching: [coaching.md](coaching.md)"]
     return "\n".join(lines) + "\n"
 
 
@@ -95,7 +97,8 @@ def write_outputs(showcase: Showcase, out_dir: Path) -> None:
         data["verdict"] = row.verdict.model_dump() if row.verdict else None
         data["assessment"] = row.assessment.model_dump() if row.assessment else None
     (out_dir / "run.json").write_text(json.dumps(run, indent=2, ensure_ascii=False), encoding="utf-8")
-    (out_dir / "report.md").write_text(render_report(showcase), encoding="utf-8")
+    report = render_report(showcase, coaching=(out_dir / "coaching.md").exists())
+    (out_dir / "report.md").write_text(report, encoding="utf-8")
 
 
 def main() -> None:
