@@ -1,9 +1,14 @@
 """The Interview Coach: grouping, refusals, debriefs, groundedness, delivery and rendering, with the fake gateway."""
 
+import json
+
 import pytest
 
-from agentic_jev_rag.coach import CoachRefused, check_interview, find_candidate, group_turns, scorecard_section
+from agentic_jev_rag.coach import CoachRefused, QuestionGroup, check_interview, debrief_question, find_candidate, group_turns, scorecard_section
 from agentic_jev_rag.corpus.documents import Document
+from agentic_jev_rag.gateway import FakeModelGateway
+from agentic_jev_rag.recruiter.interviewer import ModelOutputError
+from agentic_jev_rag.system1 import GroundednessDecision, System1TraceEntry
 
 SCORECARDS = """# Scorecards
 
@@ -107,3 +112,102 @@ def test_scorecard_section_is_the_occupations_competency_lines():
         "- **LLM systems:** agents, tool calling, prompt chains and orchestration.\n"
         "- **Production engineering:** Python and FastAPI services."
     )
+
+
+DOSSIER = "CV:\nAI ENGINEER\nLangGraph agents on AWS Bedrock; APIs in Docker Compose.\n\nCover letter:\nDear micro1."
+SCORES = [{"competency": "LLM systems", "score": 4, "evidence_chunk_ids": [], "rationale": "Concrete LangGraph design."}]
+RED_FLAGS = [{"kind": "contradiction", "quote": "it's in ECS", "detail": "The Dossier says Docker Compose."}]
+
+
+def debrief_reply(model_answer="I built LangGraph agents on AWS Bedrock.", facts=("LangGraph agents on AWS Bedrock",)):
+    return json.dumps({
+        "looking_for": "Hands-on agent design.",
+        "what_worked": [{"point": "Named the framework", "quote": "LangGraph"}],
+        "what_cost_points": [{"point": "Rambled", "quote": "so, basically, like"}],
+        "model_answer": model_answer,
+        "facts_used": list(facts),
+    })
+
+
+class ScriptedDecider:
+    """A System 1 decider whose groundedness answers come from a list, recording each claim it was asked about."""
+
+    name = "llm"
+
+    def __init__(self, *grounded: bool):
+        self.answers = list(grounded)
+        self.claims: list[tuple[str, list[str]]] = []
+
+    def groundedness(self, claim, evidence):
+        self.claims.append((claim, evidence))
+        grounded = self.answers.pop(0)
+        trace = System1TraceEntry("groundedness", "grounded" if grounded else "ungrounded", 0.1, 0.001, self.name)
+        return GroundednessDecision(grounded, float(grounded), trace)
+
+
+def group():
+    return QuestionGroup(2, "Describe a LangGraph design.", "LLM systems", ["So, basically, like, LangGraph... it's in ECS."], [{}])
+
+
+def run_debrief(gateway, decider):
+    return debrief_question(
+        gateway, "fake/system-2", decider, group(), dossier=DOSSIER, scorecard="- **LLM systems:** agents.", scores=SCORES, red_flags=RED_FLAGS
+    )
+
+
+def test_the_debrief_prompt_carries_the_question_answers_competency_score_red_flags_and_dossier():
+    gateway = FakeModelGateway(complete_responder=lambda *a: debrief_reply())
+
+    run_debrief(gateway, ScriptedDecider(True))
+
+    [(kind, model, payload)] = gateway.calls
+    prompt = payload["prompt"]
+    assert model == "fake/system-2" and payload["schema"][0] == "debrief"
+    for expected in ("Describe a LangGraph design.", "So, basically, like, LangGraph", "LLM systems", "4", "Concrete LangGraph design.",
+                     "it's in ECS", "The Dossier says Docker Compose.", "APIs in Docker Compose", "- **LLM systems:** agents."):
+        assert expected in prompt
+
+
+def test_a_grounded_model_answer_is_kept_without_a_rewrite():
+    gateway = FakeModelGateway(complete_responder=lambda *a: debrief_reply())
+    decider = ScriptedDecider(True)
+
+    debrief, trace = run_debrief(gateway, decider)
+
+    assert len(gateway.calls) == 1
+    assert debrief.grounded and debrief.model_answer == "I built LangGraph agents on AWS Bedrock."
+    assert debrief.what_cost_points == [{"point": "Rambled", "quote": "so, basically, like"}]
+    assert decider.claims == [("I built LangGraph agents on AWS Bedrock.", ["LangGraph agents on AWS Bedrock", DOSSIER])]
+    assert [t.outcome for t in trace] == ["grounded"]
+
+
+def test_an_ungrounded_model_answer_is_rewritten_once_with_the_verdict_in_the_prompt():
+    replies = iter([debrief_reply("I deployed both APIs on ECS."), debrief_reply()])
+    gateway = FakeModelGateway(complete_responder=lambda *a: next(replies))
+
+    debrief, trace = run_debrief(gateway, ScriptedDecider(False, True))
+
+    assert len(gateway.calls) == 2
+    rewrite = gateway.calls[1][2]["prompt"]
+    assert "not supported by the CV and Dossier" in rewrite and "I deployed both APIs on ECS." in rewrite
+    assert debrief.grounded and debrief.model_answer == "I built LangGraph agents on AWS Bedrock."
+    assert [t.outcome for t in trace] == ["ungrounded", "grounded"]
+
+
+def test_a_model_answer_ungrounded_twice_is_kept_and_marked():
+    gateway = FakeModelGateway(complete_responder=lambda *a: debrief_reply("I deployed both APIs on ECS."))
+
+    debrief, trace = run_debrief(gateway, ScriptedDecider(False, False))
+
+    assert len(gateway.calls) == 2
+    assert not debrief.grounded and debrief.model_answer == "I deployed both APIs on ECS."
+    assert [t.outcome for t in trace] == ["ungrounded", "ungrounded"]
+
+
+def test_malformed_debrief_output_is_retried_once_then_raises():
+    gateway = FakeModelGateway(complete_responder=lambda *a: json.dumps({"looking_for": "x"}))
+
+    with pytest.raises(ModelOutputError, match="debrief"):
+        run_debrief(gateway, ScriptedDecider())
+
+    assert len(gateway.calls) == 2
