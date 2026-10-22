@@ -1,7 +1,7 @@
 """What the Voice host is told to say for each kind of graph question, and the closing summary."""
 
-from agentic_jev_rag.voice.interview import Next
-from agentic_jev_rag.voice.script import next_instruction, summary_text
+from agentic_recruiter.voice.interview import Next
+from agentic_recruiter.voice.script import next_instruction, summary_text
 
 
 def test_each_kind_of_question_is_delivered_with_its_text_unchanged():

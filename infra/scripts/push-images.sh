@@ -11,11 +11,11 @@ registry="$(aws sts get-caller-identity --query Account --output text).dkr.ecr.$
 aws ecr get-login-password --region "$region" | docker login --username AWS --password-stdin "$registry" >/dev/null
 
 for target in api voice; do
-  if aws ecr describe-images --region "$region" --repository-name "swiftai/$target" --image-ids imageTag="$tag" >/dev/null 2>&1; then
-    echo "swiftai/$target:$tag already pushed" >&2
+  if aws ecr describe-images --region "$region" --repository-name "agentic-recruiter/$target" --image-ids imageTag="$tag" >/dev/null 2>&1; then
+    echo "agentic-recruiter/$target:$tag already pushed" >&2
     continue
   fi
-  docker build --platform linux/arm64 --target "$target" -t "$registry/swiftai/$target:$tag" . >&2
-  docker push "$registry/swiftai/$target:$tag" >&2
+  docker build --platform linux/arm64 --target "$target" -t "$registry/agentic-recruiter/$target:$tag" . >&2
+  docker push "$registry/agentic-recruiter/$target:$tag" >&2
 done
 echo "$tag"

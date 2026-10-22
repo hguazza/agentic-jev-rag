@@ -51,10 +51,10 @@ jobs:
         run: |
           # The state bucket is named after the account (infra/bootstrap), so CI needs no backend.hcl.
           account=$(aws sts get-caller-identity --query Account --output text)
-          terraform -chdir=infra/main init -input=false -backend-config="bucket=swiftai-tfstate-$account"
+          terraform -chdir=infra/main init -input=false -backend-config="bucket=agentic-recruiter-tfstate-$account"
           terraform -chdir=infra/main apply -input=false -auto-approve -var image_tag="$TAG"
       - name: Wait for the services
-        run: aws ecs wait services-stable --cluster swiftai --services rag-api recruiter-api voice-worker
+        run: aws ecs wait services-stable --cluster agentic-recruiter --services rag-api recruiter-api voice-worker
       - name: Index the corpus if it changed
         run: |
           if ! git diff --quiet HEAD~1 HEAD -- corpus; then infra/scripts/ingest.sh; fi

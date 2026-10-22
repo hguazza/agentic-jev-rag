@@ -1,6 +1,6 @@
 """Timing of one spoken answer, from LiveKit agent and user state changes."""
 
-from agentic_jev_rag.voice.timing import TurnTimer, count_fillers
+from agentic_recruiter.voice.timing import TurnTimer, count_fillers
 
 
 class Clock:

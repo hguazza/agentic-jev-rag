@@ -143,7 +143,7 @@ resource "aws_wafv2_web_acl" "api" {
 
 resource "aws_cloudfront_distribution" "api" {
   enabled     = true
-  comment     = "SwiftAI Recruiter API"
+  comment     = "Agentic Recruiter API"
   price_class = "PriceClass_100"
   web_acl_id  = aws_wafv2_web_acl.api.arn
 

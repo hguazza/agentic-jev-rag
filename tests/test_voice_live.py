@@ -13,11 +13,11 @@ pytest.importorskip("livekit.agents")
 from livekit.agents import AgentSession, mock_tools  # noqa: E402
 from livekit.plugins import openai  # noqa: E402
 
-from agentic_jev_rag.config import load_config  # noqa: E402
-from agentic_jev_rag.openrouter import BASE_URL  # noqa: E402
-from agentic_jev_rag.voice.agent import InterviewerVoice  # noqa: E402
-from agentic_jev_rag.voice.interview import Next, VoiceInterview  # noqa: E402
-from agentic_jev_rag.voice.recruiter_client import RecruiterClient  # noqa: E402
+from agentic_recruiter.config import load_config  # noqa: E402
+from agentic_recruiter.openrouter import BASE_URL  # noqa: E402
+from agentic_recruiter.voice.agent import InterviewerVoice  # noqa: E402
+from agentic_recruiter.voice.interview import Next, VoiceInterview  # noqa: E402
+from agentic_recruiter.voice.recruiter_client import RecruiterClient  # noqa: E402
 
 pytestmark = pytest.mark.live
 

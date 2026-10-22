@@ -24,7 +24,7 @@ locals {
       cpu     = 512
       memory  = 1024
       role    = null
-      command = ["uvicorn", "agentic_jev_rag.rag.api:create_default_rag_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+      command = ["uvicorn", "agentic_recruiter.rag.api:create_default_rag_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
       env     = { QDRANT_URL = var.qdrant_url, SYSTEM_1 = var.system_1 }
       secrets = ["OPEN_ROUTER_API_TOKEN", "QDRANT_API_KEY"]
     }
@@ -34,7 +34,7 @@ locals {
       cpu     = 512
       memory  = 1024
       role    = aws_iam_role.recruiter.arn
-      command = ["uvicorn", "agentic_jev_rag.recruiter.api:create_default_recruiter_app", "--factory", "--host", "0.0.0.0", "--port", "8001", "--timeout-keep-alive", "125"]
+      command = ["uvicorn", "agentic_recruiter.recruiter.api:create_default_recruiter_app", "--factory", "--host", "0.0.0.0", "--port", "8001", "--timeout-keep-alive", "125"]
       env = {
         AWS_REGION       = var.region
         RAG_URL          = "http://rag-api.${local.internal}:8000"
@@ -50,7 +50,7 @@ locals {
       cpu     = 1024
       memory  = 2048
       role    = null
-      command = ["python", "-m", "agentic_jev_rag.voice", "start"]
+      command = ["python", "-m", "agentic_recruiter.voice", "start"]
       env     = { RECRUITER_URL = "http://recruiter-api.${local.internal}:8001" }
       secrets = ["OPEN_ROUTER_API_TOKEN", "RECRUITER_API_KEY", "LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET"]
     }
@@ -59,7 +59,7 @@ locals {
       cpu     = 512
       memory  = 1024
       role    = null
-      command = ["python", "-m", "agentic_jev_rag.rag.ingest"]
+      command = ["python", "-m", "agentic_recruiter.rag.ingest"]
       env     = { QDRANT_URL = var.qdrant_url }
       secrets = ["OPEN_ROUTER_API_TOKEN", "QDRANT_API_KEY"]
     }

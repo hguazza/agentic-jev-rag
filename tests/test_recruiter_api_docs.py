@@ -3,16 +3,16 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from agentic_jev_rag.recruiter.api import create_recruiter_app
-from agentic_jev_rag.recruiter.schemas import ScreeningVerdict, json_schema
+from agentic_recruiter.recruiter.api import create_recruiter_app
+from agentic_recruiter.recruiter.schemas import ScreeningVerdict, json_schema
 
 GENERATED = {"HTTPValidationError", "ValidationError"}
 
 
 @pytest.fixture(scope="module")
 def openapi(config):
-    from agentic_jev_rag.recruiter.context import RecruiterContext
-    from agentic_jev_rag.recruiter.rag_client import RagClient
+    from agentic_recruiter.recruiter.context import RecruiterContext
+    from agentic_recruiter.recruiter.rag_client import RagClient
     from tests.rag_scripts import scripted_gateway
 
     ctx = RecruiterContext(config=config, gateway=scripted_gateway(), rag=RagClient("http://rag"))

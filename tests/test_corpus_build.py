@@ -4,10 +4,10 @@ import json
 from datetime import date
 from pathlib import Path
 
-from agentic_jev_rag.corpus.build import build_corpus
-from agentic_jev_rag.corpus.public import clean_resume_text, job_occupation, read_jobs, read_resumes
-from agentic_jev_rag.gateway import FakeModelGateway
-from agentic_jev_rag.rag.chunking import chunk_document
+from agentic_recruiter.corpus.build import build_corpus
+from agentic_recruiter.corpus.public import clean_resume_text, job_occupation, read_jobs, read_resumes
+from agentic_recruiter.gateway import FakeModelGateway
+from agentic_recruiter.rag.chunking import chunk_document
 
 PUBLIC = Path(__file__).parent / "fixtures" / "public"
 TODAY = date(2026, 10, 8)
@@ -88,6 +88,6 @@ def test_build_is_deterministic_for_a_seed():
 
 
 def _doc(text):
-    from agentic_jev_rag.corpus.documents import Document
+    from agentic_recruiter.corpus.documents import Document
 
     return Document("C-1", "candidates", "T", text, {})

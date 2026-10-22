@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from agentic_jev_rag.config import VoiceConfig, load_config
+from agentic_recruiter.config import VoiceConfig, load_config
 
 RECRUITER = Path(__file__).parents[1] / "configs" / "recruiter.toml"
 
@@ -99,8 +99,8 @@ def test_voice_table_and_recruiter_url_override(tmp_path, monkeypatch):
 def test_aws_settings_can_come_from_the_environment(monkeypatch):
     monkeypatch.setenv("QDRANT_API_KEY", "qdrant-secret")
     monkeypatch.setenv("PERSISTENCE", "dynamodb")
-    monkeypatch.setenv("CHECKPOINT_TABLE", "swiftai-checkpoints")
-    monkeypatch.setenv("RUNS_TABLE", "swiftai-runs")
+    monkeypatch.setenv("CHECKPOINT_TABLE", "agentic-recruiter-checkpoints")
+    monkeypatch.setenv("RUNS_TABLE", "agentic-recruiter-runs")
     monkeypatch.setenv("DYNAMODB_ENDPOINT", "http://localhost:8002")
     monkeypatch.setenv("RECRUITER_API_KEY", "api-secret")
 
@@ -108,7 +108,7 @@ def test_aws_settings_can_come_from_the_environment(monkeypatch):
 
     assert config.qdrant_api_key == "qdrant-secret"
     assert config.persistence == "dynamodb"
-    assert (config.checkpoint_table, config.runs_table) == ("swiftai-checkpoints", "swiftai-runs")
+    assert (config.checkpoint_table, config.runs_table) == ("agentic-recruiter-checkpoints", "agentic-recruiter-runs")
     assert config.dynamodb_endpoint == "http://localhost:8002"
     assert config.api_key == "api-secret"
     assert "qdrant-secret" not in repr(config) and "api-secret" not in repr(config)

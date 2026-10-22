@@ -41,7 +41,7 @@ Utilizaremos dados públicos jurídicos extraídos via REST API:
 - **Pós-Retrieval:** Reranking de chunks com Cross-Encoder (`Cohere Rerank` ou `bge-reranker-large`).
 - **Agentic Loop:** Reescrita dinâmica de query, decomposição de sub-perguntas e loops de verificação de resposta via LLM generativo.
 
-### Level 3: Agentic Jev RAG (`03_agentic_jev_rag.ipynb`)
+### Level 3: Agentic Jev RAG (`03_agentic_recruiter.ipynb`)
 Integração do **Jev** como modelo **System 1** via pacote `langchain-typesafe`:
 - **Roteamento Instantâneo (`Choice`):** Decisão imediata sobre qual coleção ou ferramenta consultar, reduzindo a latência de roteamento.
 - **Filtragem e Contradição em Paralelo (`Score` & `Nule`):** O Jev recebe múltiplos chunks e avalia em uma única chamada paralela se cada chunk atende à dúvida e se está vigente/sem contradições.
@@ -71,7 +71,7 @@ Integração do **Jev** como modelo **System 1** via pacote `langchain-typesafe`
 2. `notebooks/02_agentic_rag.ipynb`:
    - Implementar busca híbrida (BM25 + Dense) e reranker.
    - Adicionar agente com chamadas de ferramentas e reescrita de query.
-3. `notebooks/03_agentic_jev_rag.ipynb`:
+3. `notebooks/03_agentic_recruiter.ipynb`:
    - Configurar o `TypeSafeClassifier` com `langchain-typesafe`.
    - Substituir o roteador e os guardrails do LLM comum pelo Jev.
    - Executar benchmark comparativo de latência (ms vs. segundos) e custo entre Level 2 e Level 3.

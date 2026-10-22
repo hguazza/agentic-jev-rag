@@ -6,9 +6,9 @@ import json
 import httpx
 import pytest
 
-from agentic_jev_rag.recruiter.api import create_recruiter_app
-from agentic_jev_rag.voice.interview import EmptyAnswer, InterviewFailed, InterviewOver, VoiceInterview
-from agentic_jev_rag.voice.recruiter_client import InterviewRefused, RecruiterClient
+from agentic_recruiter.recruiter.api import create_recruiter_app
+from agentic_recruiter.voice.interview import EmptyAnswer, InterviewFailed, InterviewOver, VoiceInterview
+from agentic_recruiter.voice.recruiter_client import InterviewRefused, RecruiterClient
 from tests.interview_scripts import interview_gateway, interview_question
 
 
@@ -180,10 +180,10 @@ def test_each_submitted_answer_is_logged_for_a_human_to_check(voice, caplog):
         interview.buffer.add("I partitioned Kafka topics.")
         await interview.submit()
 
-    with caplog.at_level("INFO", logger="agentic_jev_rag.voice.interview"):
+    with caplog.at_level("INFO", logger="agentic_recruiter.voice.interview"):
         asyncio.run(scenario())
 
-    [record] = [r for r in caplog.records if r.name == "agentic_jev_rag.voice.interview"]
+    [record] = [r for r in caplog.records if r.name == "agentic_recruiter.voice.interview"]
     assert interview.interview_id in record.getMessage()
     assert "question" in record.getMessage() and "I partitioned Kafka topics." in record.getMessage()
 
@@ -191,7 +191,7 @@ def test_each_submitted_answer_is_logged_for_a_human_to_check(voice, caplog):
 def test_the_voice_client_sends_the_api_key(recruiter_context):
     from dataclasses import replace
 
-    from agentic_jev_rag.voice.recruiter_client import RecruiterError
+    from agentic_recruiter.voice.recruiter_client import RecruiterError
 
     ctx = recruiter_context(interview_gateway())
     ctx.config = replace(ctx.config, api_key="s3cret")

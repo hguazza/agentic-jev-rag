@@ -1,6 +1,6 @@
 # Fast-Track Recruitment
 
-Fast-track is SwiftAI's service for clients who need a role filled quickly without lowering the bar.
+Fast-track is the agency's service for clients who need a role filled quickly without lowering the bar.
 
 ## Service levels
 

@@ -6,7 +6,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from agentic_jev_rag.openrouter import OpenRouterError, OpenRouterGateway
+from agentic_recruiter.openrouter import OpenRouterError, OpenRouterGateway
 
 RECORDED = Path(__file__).parent / "fixtures" / "openrouter"
 

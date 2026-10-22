@@ -1,6 +1,6 @@
 """The fake Model gateway used by every offline test."""
 
-from agentic_jev_rag.gateway import FakeModelGateway, ToolCall
+from agentic_recruiter.gateway import FakeModelGateway, ToolCall
 
 
 def test_scripted_chat_returns_tool_calls():

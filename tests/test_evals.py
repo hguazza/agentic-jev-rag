@@ -4,10 +4,10 @@ import json
 
 import pytest
 
-from agentic_jev_rag.evals.match import relevant_candidates
-from agentic_jev_rag.evals.metrics import accuracy, mrr, percentile, recall_at_k
-from agentic_jev_rag.evals.system1 import run_system1_comparison
-from agentic_jev_rag.system1 import make_deciders
+from agentic_recruiter.evals.match import relevant_candidates
+from agentic_recruiter.evals.metrics import accuracy, mrr, percentile, recall_at_k
+from agentic_recruiter.evals.system1 import run_system1_comparison
+from agentic_recruiter.system1 import make_deciders
 from tests.rag_scripts import scripted_gateway
 
 

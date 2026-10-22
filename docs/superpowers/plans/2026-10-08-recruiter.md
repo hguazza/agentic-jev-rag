@@ -1,10 +1,10 @@
-# SwiftAI Recruiter Implementation Plan
+# Agentic Recruiter Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task by task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A FastAPI RAG service over a recruiting corpus, a LangGraph five-agent Recruiter that calls it as a tool, and a System 1 comparison of an LLM decider against Jev.
 
-**Architecture:** One package, `agentic_jev_rag`, with these layers:
+**Architecture:** One package, `agentic_recruiter`, with these layers:
 
 - Model gateway (OpenRouter, faked in tests);
 - corpus;
@@ -44,9 +44,9 @@ Two FastAPI apps are served from one Docker image.
 ### Task 1: Clean slate and dependencies
 
 **Files:**
-- Delete: `src/agentic_jev_rag/pipeline.py`, `chunking.py`, `indexing.py`, `corpus.py`; `tests/test_level_pipeline.py`; `tests/fixtures/corpus/`. The parked doc points at commit `15e4af3` for recovery.
+- Delete: `src/agentic_recruiter/pipeline.py`, `chunking.py`, `indexing.py`, `corpus.py`; `tests/test_level_pipeline.py`; `tests/fixtures/corpus/`. The parked doc points at commit `15e4af3` for recovery.
 - Rename: `configs/en.toml` → `configs/recruiter.toml`. Collections become `["candidates", "jobs", "interviews", "policies"]`. Add `system_1 = "llm"`, `rerank_candidates = 30` and `rag_url = "http://localhost:8000"`.
-- Modify: `src/agentic_jev_rag/config.py` and `tests/test_config.py`.
+- Modify: `src/agentic_recruiter/config.py` and `tests/test_config.py`.
 - Modify: `tests/conftest.py`, which keeps only the Qdrant and config fixtures.
 - Modify: `pyproject.toml`. Add `fastapi`, `uvicorn[standard]`, `langgraph>=1.2,<1.3` and `pydantic>=2`.
 
@@ -78,7 +78,7 @@ def load_config(path) -> Config  # env overrides: QDRANT_URL, RAG_URL, SYSTEM_1
 ### Task 2: Model gateway: chat with tools, rerank, Jev decide
 
 **Files:**
-- Modify: `src/agentic_jev_rag/gateway.py` and `openrouter.py`.
+- Modify: `src/agentic_recruiter/gateway.py` and `openrouter.py`.
 - Test: `tests/test_openrouter_gateway.py`.
 - Recorded responses: `tests/fixtures/openrouter/chat_tool_call.json`, `rerank.json` and `jev_systemone.json`. These are already captured live.
 
@@ -138,7 +138,7 @@ class FakeModelGateway:
 ### Task 3: Corpus records, Policies and test fixtures
 
 **Files:**
-- Create: `src/agentic_jev_rag/corpus/__init__.py` and `documents.py`.
+- Create: `src/agentic_recruiter/corpus/__init__.py` and `documents.py`.
 - Create: `corpus/policies/*.md`, with six hand-written Policies:
   - `fair-hiring.md` (protected characteristics, indirect discrimination examples);
   - `data-protection-and-consent.md` (GDPR, consent window, retention of 24 months, right to erasure);
@@ -167,7 +167,7 @@ def write_jsonl(documents: list[Document], path: Path) -> None
 
 ### Task 4: Structure-aware chunking
 
-**Files:** create `src/agentic_jev_rag/rag/__init__.py` and `rag/chunking.py`. Test: `tests/test_chunking.py`.
+**Files:** create `src/agentic_recruiter/rag/__init__.py` and `rag/chunking.py`. Test: `tests/test_chunking.py`.
 
 **Interfaces produced:**
 
@@ -198,7 +198,7 @@ def chunk_document(document: Document, size: int, overlap: int) -> list[Chunk]
 
 ### Task 5: Hybrid index and Search
 
-**Files:** create `src/agentic_jev_rag/rag/sparse.py` and `rag/index.py`. Test: `tests/test_index.py` (real Qdrant).
+**Files:** create `src/agentic_recruiter/rag/sparse.py` and `rag/index.py`. Test: `tests/test_index.py` (real Qdrant).
 
 **Interfaces produced:**
 
@@ -234,7 +234,7 @@ def hybrid_search(query: str, collections: Sequence[str], filters: SearchFilters
 
 ### Task 6: System 1 deciders (LLM and Jev)
 
-**Files:** create `src/agentic_jev_rag/system1/__init__.py`, `types.py`, `llm.py`, `jev.py` and `prompts.py` (shared instructions). Test: `tests/test_system1.py`.
+**Files:** create `src/agentic_recruiter/system1/__init__.py`, `types.py`, `llm.py`, `jev.py` and `prompts.py` (shared instructions). Test: `tests/test_system1.py`.
 
 **Interfaces produced:**
 
@@ -293,7 +293,7 @@ Trace outcomes are the collection name, `"kept 3/5"`, the verdict, and `"grounde
 ### Task 7: RAG service and API (Search, Match, Ask)
 
 **Files:**
-- Create: `src/agentic_jev_rag/rag/models.py` (Pydantic request and response models), `rag/service.py` and `rag/api.py`.
+- Create: `src/agentic_recruiter/rag/models.py` (Pydantic request and response models), `rag/service.py` and `rag/api.py`.
 - Test: `tests/test_rag_api.py` (TestClient, real Qdrant, fake gateway, fixture corpus indexed once per session).
 
 **Interfaces produced (Pydantic):**
@@ -345,7 +345,7 @@ def create_default_rag_app() -> FastAPI               # load_config(CONFIG env o
 
 ### Task 8: Recruiter tools and the agent loop
 
-**Files:** create `src/agentic_jev_rag/recruiter/__init__.py`, `rag_client.py`, `tools.py` and `agent_loop.py`. Test: `tests/test_agent_loop.py`.
+**Files:** create `src/agentic_recruiter/recruiter/__init__.py`, `rag_client.py`, `tools.py` and `agent_loop.py`. Test: `tests/test_agent_loop.py`.
 
 **Interfaces produced:**
 
@@ -387,7 +387,7 @@ def rag_tools(rag: RagClient) -> dict[str, Tool]   # search, match_candidates, a
 
 ### Task 9: The five agents
 
-**Files:** create `src/agentic_jev_rag/recruiter/context.py`, `schemas.py`, `prompts.py`, `sourcer.py`, `screener.py`, `interviewer.py`, `compliance.py` and `supervisor.py`. Test: `tests/test_agents.py`.
+**Files:** create `src/agentic_recruiter/recruiter/context.py`, `schemas.py`, `prompts.py`, `sourcer.py`, `screener.py`, `interviewer.py`, `compliance.py` and `supervisor.py`. Test: `tests/test_agents.py`.
 
 **Interfaces produced:**
 
@@ -438,7 +438,7 @@ def supervise(ctx, progress: dict) -> str   # one of "sourcer", "screener", "int
 
 ### Task 10: LangGraph Recruiter graph and Recruiter API
 
-**Files:** create `src/agentic_jev_rag/recruiter/graph.py`, `interview_graph.py`, `report.py` and `api.py`. Test: `tests/test_recruiter_api.py`.
+**Files:** create `src/agentic_recruiter/recruiter/graph.py`, `interview_graph.py`, `report.py` and `api.py`. Test: `tests/test_recruiter_api.py`.
 
 **Interfaces produced:**
 
@@ -487,7 +487,7 @@ The Supervisor is limited to 10 steps. When it's exhausted the run goes to the r
 
 ### Task 11: Build the real corpus
 
-**Files:** create `src/agentic_jev_rag/corpus/public.py` (download and sample the datasets chosen in `docs/research/2026-10-08-recruiting-datasets.md`), `corpus/synthetic.py` (Clients, Consent dates, names, interview notes, Outcomes via the gateway, seeded) and `corpus/build.py` (CLI: `uv run python -m agentic_jev_rag.corpus.build`). Output: `corpus/*.jsonl`, committed. Also create `src/agentic_jev_rag/rag/ingest.py` (CLI: index the corpus into Qdrant). Test: `tests/test_corpus_build.py` (sampling and normalisation from small fixture extracts, with a fake gateway for metadata extraction and generation).
+**Files:** create `src/agentic_recruiter/corpus/public.py` (download and sample the datasets chosen in `docs/research/2026-10-08-recruiting-datasets.md`), `corpus/synthetic.py` (Clients, Consent dates, names, interview notes, Outcomes via the gateway, seeded) and `corpus/build.py` (CLI: `uv run python -m agentic_recruiter.corpus.build`). Output: `corpus/*.jsonl`, committed. Also create `src/agentic_recruiter/rag/ingest.py` (CLI: index the corpus into Qdrant). Test: `tests/test_corpus_build.py` (sampling and normalisation from small fixture extracts, with a fake gateway for metadata extraction and generation).
 
 **Notes:**
 - Sample about 200 résumés and 60 Jobs over 6 occupations.
@@ -508,8 +508,8 @@ Run the build live once and commit the corpus.
 
 **Files:**
 - Create: `evals/data/input_guardrail.jsonl` (60 rows), `route.jsonl` (40), `chunk_relevance.jsonl` (40, built from the corpus) and `groundedness.jsonl` (30).
-- Create: `src/agentic_jev_rag/evals/system1.py`, `evals/match.py` and `evals/metrics.py`.
-- CLIs: `uv run python -m agentic_jev_rag.evals.system1 [--implementations llm jev]` and `uv run python -m agentic_jev_rag.evals.match`. Output goes to `results/<timestamp>/` (records.jsonl and summary.md).
+- Create: `src/agentic_recruiter/evals/system1.py`, `evals/match.py` and `evals/metrics.py`.
+- CLIs: `uv run python -m agentic_recruiter.evals.system1 [--implementations llm jev]` and `uv run python -m agentic_recruiter.evals.match`. Output goes to `results/<timestamp>/` (records.jsonl and summary.md).
 - Test: `tests/test_evals.py`.
 
 **Interfaces:**

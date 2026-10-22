@@ -4,16 +4,16 @@ import json
 
 import pytest
 
-from agentic_jev_rag.gateway import Completion, Decisions, FakeModelGateway
-from agentic_jev_rag.system1 import System1Error, make_deciders
-from agentic_jev_rag.system1.prompts import (
+from agentic_recruiter.gateway import Completion, Decisions, FakeModelGateway
+from agentic_recruiter.system1 import System1Error, make_deciders
+from agentic_recruiter.system1.prompts import (
     GUARDRAIL_CRITERIA,
     ROUTE_CRITERIA,
     SIGNALS_CONSISTENCY_CRITERIA,
     TURN_DEPTH_CRITERIA,
     TURN_INTELLIGIBILITY_CRITERIA,
 )
-from agentic_jev_rag.system1.types import turn_label
+from agentic_recruiter.system1.types import turn_label
 
 
 def llm_answering(payload_by_schema: dict):

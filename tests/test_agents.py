@@ -1,8 +1,8 @@
 """The five agents, each driven by a scripted fake gateway against the in-process RAG API."""
 
-from agentic_jev_rag.gateway import ToolCall
-from agentic_jev_rag.recruiter import compliance, interviewer, screener, sourcer, supervisor
-from agentic_jev_rag.recruiter.schemas import CompetencyScore, InterviewTurn, ScreeningVerdict, Shortlist, ShortlistEntry
+from agentic_recruiter.gateway import ToolCall
+from agentic_recruiter.recruiter import compliance, interviewer, screener, sourcer, supervisor
+from agentic_recruiter.recruiter.schemas import CompetencyScore, InterviewTurn, ScreeningVerdict, Shortlist, ShortlistEntry
 from tests.rag_scripts import by_agent, scripted_gateway, turns
 
 VERDICT = {
@@ -149,7 +149,7 @@ def test_supervisor_cannot_finish_before_compliance_review(recruiter_context):
 
 
 def test_agent_schemas_are_flat_and_strict_for_structured_output():
-    from agentic_jev_rag.recruiter.schemas import json_schema
+    from agentic_recruiter.recruiter.schemas import json_schema
 
     schema = json_schema(ScreeningVerdict, exclude=("candidate_id", "job_id"))
 

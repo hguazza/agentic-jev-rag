@@ -1,4 +1,4 @@
-"""The deployed stack, through CloudFront. Run with SWIFTAI_URL and RECRUITER_API_KEY set: uv run pytest -m live tests/test_aws_live.py"""
+"""The deployed stack, through CloudFront. Run with RECRUITER_URL and RECRUITER_API_KEY set: uv run pytest -m live tests/test_aws_live.py"""
 
 import os
 import time
@@ -8,14 +8,14 @@ import pytest
 
 pytestmark = pytest.mark.live
 
-URL = os.environ.get("SWIFTAI_URL", "")
+URL = os.environ.get("RECRUITER_URL", "")
 KEY = os.environ.get("RECRUITER_API_KEY", "")
 
 
 @pytest.fixture(scope="module")
 def api():
     if not (URL and KEY):
-        pytest.skip("set SWIFTAI_URL and RECRUITER_API_KEY to check the deployed stack")
+        pytest.skip("set RECRUITER_URL and RECRUITER_API_KEY to check the deployed stack")
     with httpx.Client(base_url=URL, headers={"X-API-Key": KEY}, timeout=60) as client:
         yield client
 

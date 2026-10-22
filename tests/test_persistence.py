@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from agentic_jev_rag.recruiter.persistence import (
+from agentic_recruiter.recruiter.persistence import (
     STALE_AFTER_S,
     MemoryRuns,
     RunRecord,

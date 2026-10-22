@@ -1,6 +1,6 @@
-# Agentic Jev RAG: SwiftAI Recruiter
+# Agentic Recruiter
 
-An autonomous AI recruiter for SwiftAI Recruit (`docs/company-overview.md`): a production RAG service over recruiting documents, and a LangGraph multi-agent Recruiter that calls it as a tool. The Recruiter's fast typed checks, its System 1 decisions, can be made by a small LLM or by Jev, and the project measures how the two compare on accuracy, latency and cost. Built to demonstrate the role in `docs/job-description.md`. The earlier EU legal benchmark is parked in `docs/parked/eu-legal-rag-benchmark.md`.
+An autonomous AI recruiter for a fictional recruiting agency: a production RAG service over recruiting documents, and a LangGraph multi-agent Recruiter that calls it as a tool. The Recruiter's fast typed checks, its System 1 decisions, can be made by a small LLM or by Jev, and the project measures how the two compare on accuracy, latency and cost. Built to demonstrate the role in `docs/job-description.md`. The earlier EU legal benchmark is parked in `docs/parked/eu-legal-rag-benchmark.md`.
 
 ## Language
 
@@ -15,7 +15,7 @@ A person in the talent pool. Their Profile is their CV plus metadata (occupation
 _Avoid_: applicant, user, resume (for the person)
 
 **Dossier**:
-Everything SwiftAI holds about a Candidate that an interview can draw on: the CV and, when present, a cover letter and a LinkedIn profile (synthetic, for demo Candidates).
+Everything the agency holds about a Candidate that an interview can draw on: the CV and, when present, a cover letter and a LinkedIn profile (synthetic, for demo Candidates).
 _Avoid_: file, record
 
 **Job**:
@@ -23,7 +23,7 @@ An open or past role at a Client, with its description, required skills, seniori
 _Avoid_: vacancy, position, req
 
 **Client**:
-A company that hires through SwiftAI Recruit. Clients are fictional.
+A company that hires through the agency. Clients are fictional.
 
 **Interview note**:
 A record of one interview stage for a Candidate and a Job: what was asked, what was observed, the scores and the Outcome. Interview notes are synthetic.
@@ -32,13 +32,13 @@ A record of one interview stage for a Candidate and a Job: what was asked, what 
 What happened to a Candidate for a Job: advanced, rejected, offered, hired or withdrew.
 
 **Policy**:
-A SwiftAI rule or playbook the Recruiter must follow: fair hiring, data protection and consent, interview guides, Scorecards, fast-track rules.
+An agency rule or playbook the Recruiter must follow: fair hiring, data protection and consent, interview guides, Scorecards, fast-track rules.
 
 **Scorecard**:
 The competencies a Job is assessed on, each rated on a fixed scale.
 
 **Consent**:
-A Candidate's permission for SwiftAI to hold and use their Profile, valid until a recorded date. A Candidate without valid Consent must not be contacted or shortlisted.
+A Candidate's permission for the agency to hold and use their Profile, valid until a recorded date. A Candidate without valid Consent must not be contacted or shortlisted.
 
 ### RAG service
 

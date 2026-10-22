@@ -2,8 +2,8 @@
 
 from datetime import date
 
-from agentic_jev_rag.gateway import FakeModelGateway
-from agentic_jev_rag.rag.index import SearchFilters, hybrid_search, index_corpus
+from agentic_recruiter.gateway import FakeModelGateway
+from agentic_recruiter.rag.index import SearchFilters, hybrid_search, index_corpus
 
 
 def search(query, config, qdrant, collections=("candidates",), filters=SearchFilters(), gateway=None, limit=5):

@@ -1,6 +1,6 @@
 # Data Protection and Consent Policy
 
-SwiftAI Recruit processes candidate personal data under the GDPR. A candidate's profile, CV and interview notes are personal data.
+The agency processes candidate personal data under the GDPR. A candidate's profile, CV and interview notes are personal data.
 
 ## Lawful basis and consent
 

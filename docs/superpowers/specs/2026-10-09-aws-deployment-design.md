@@ -32,8 +32,8 @@ Reviewer ─HTTPS─▶ CloudFront (+ WAF rate limit) ─VPC origin─▶ intern
   │        │                         run graph, phase 2: async ─▶ AgentCore    │
   │        │                                                 Runtime (VPC mode)│
   │        ├─ checkpoints ─▶ DynamoDB ◀─ checkpoints ───────────────┘          │
-  │        └─ rag-api.swiftai.internal ─▶ rag-api (ECS, 2 tasks) ─▶ Qdrant Cloud│
-  │   voice-worker (ECS, 1 task) ─▶ recruiter-api.swiftai.internal             │
+  │        └─ rag-api.agentic-recruiter.internal ─▶ rag-api (ECS, 2 tasks) ─▶ Qdrant Cloud│
+  │   voice-worker (ECS, 1 task) ─▶ recruiter-api.agentic-recruiter.internal             │
   │        └─ outbound WSS ─▶ LiveKit Cloud ◀─ Agents Playground               │
   │ public subnets: NAT gateway                                                │
   └────────────────────────────────────────────────────────────────────────────┘
@@ -45,7 +45,7 @@ Reviewer ─HTTPS─▶ CloudFront (+ WAF rate limit) ─VPC origin─▶ intern
 - A dedicated VPC over two AZs: public subnets hold only the NAT gateway; tasks, the internal ALB and AgentCore's network interfaces sit in private subnets.
 - **One NAT gateway**, not one per AZ: it is a single point of failure for egress, and that is a deliberate cost trade documented here. Every service needs internet egress anyway (OpenRouter, Qdrant Cloud, LiveKit).
 - An S3 gateway endpoint (free) carries ECR image layers. Interface endpoints (ECR API, Logs, Secrets Manager) are skipped: about $45/month for traffic the NAT already carries.
-- **Service discovery through Cloud Map DNS** (`swiftai.internal`), not Service Connect: Cloud Map names resolve from anything in the VPC, including AgentCore's interfaces in phase 2, so one mechanism serves both phases and no internal ALB is needed for the RAG API.
+- **Service discovery through Cloud Map DNS** (`agentic-recruiter.internal`), not Service Connect: Cloud Map names resolve from anything in the VPC, including AgentCore's interfaces in phase 2, so one mechanism serves both phases and no internal ALB is needed for the RAG API.
 - Security groups: the ALB is internal and accepts port 80 from the VPC's own range only (CloudFront's VPC origin reaches it through interfaces inside the VPC); recruiter-api accepts the ALB and the Voice worker; rag-api accepts recruiter-api (and the AgentCore security group in phase 2).
 
 ## Services (phase 1)
@@ -53,7 +53,7 @@ Reviewer ─HTTPS─▶ CloudFront (+ WAF rate limit) ─VPC origin─▶ intern
 | Service | Image | Size (vCPU / GB) | Tasks | Exposure |
 |---|---|---|---|---|
 | recruiter-api | `api` | 0.5 / 1 | 2, autoscaled on request count | internal ALB ← CloudFront |
-| rag-api | `api` | 0.5 / 1 | 2, autoscaled on CPU | `rag-api.swiftai.internal:8000` |
+| rag-api | `api` | 0.5 / 1 | 2, autoscaled on CPU | `rag-api.agentic-recruiter.internal:8000` |
 | voice-worker | `voice` | 1 / 2 | 1 | none (outbound only) |
 | ingest | `api` | 0.5 / 1 | one-off `RunTask` | none |
 
@@ -80,7 +80,7 @@ The run is the opposite shape: about 3 minutes, five agents, mostly waiting on m
 - **A seam in the Recruiter API**: `RunExecutor` with two adapters, `LocalRuns` (a background thread; local, tests, phase 1) and `AgentCoreRuns` (`InvokeAgentRuntime` through boto3). Config `runs = "local" | "agentcore"` picks one. `POST /runs` and `GET /runs/{run_id}` call the seam and nothing else changes.
 - **Asynchronous invocation** (up to 8 hours), independent of API deploys, which removes phase 1's background-thread limit. The session id is `run-<run_id>` (AgentCore session ids are at least 33 characters).
 - **`GET /runs/{run_id}` reads the run record**, which the agent writes when it finishes, so the API never waits on or calls the agent to report status.
-- **VPC mode** in the private subnets, so the agent reaches `rag-api.swiftai.internal` without exposing the RAG API.
+- **VPC mode** in the private subnets, so the agent reaches `rag-api.agentic-recruiter.internal` without exposing the RAG API.
 - **Inbound auth is IAM (SigV4)**: only the recruiter-api task role may invoke the runtime. No JWT authorizer is needed because no external client calls it.
 - **Observability**: AgentCore's OpenTelemetry traces to CloudWatch GenAI observability, one trace per run showing each agent's steps.
 - **Why DynamoDB and not AgentCore Memory for checkpoints**: one checkpointer serves both runtimes and both graphs, and the table is inspectable. AgentCore Memory is the right place for long-term memory across interviews, which this design doesn't need yet.

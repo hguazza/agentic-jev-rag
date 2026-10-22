@@ -18,20 +18,20 @@ variable "region" {
 
 variable "github_repository" {
   type    = string
-  default = "hguazza/agentic-jev-rag"
+  default = "hguazza/agentic-recruiter"
 }
 
 provider "aws" {
   region = var.region
   default_tags {
-    tags = { Project = "swiftai", ManagedBy = "terraform", Stack = "bootstrap" }
+    tags = { Project = "agentic-recruiter", ManagedBy = "terraform", Stack = "bootstrap" }
   }
 }
 
 data "aws_caller_identity" "current" {}
 
 resource "aws_s3_bucket" "state" {
-  bucket = "swiftai-tfstate-${data.aws_caller_identity.current.account_id}"
+  bucket = "agentic-recruiter-tfstate-${data.aws_caller_identity.current.account_id}"
 }
 
 resource "aws_s3_bucket_versioning" "state" {
@@ -85,7 +85,7 @@ data "aws_iam_policy_document" "github_trust" {
 
 # AdministratorAccess because Terraform creates IAM roles; scoping this down is a known follow-up (spec, CI/CD).
 resource "aws_iam_role" "deploy" {
-  name               = "swiftai-github-deploy"
+  name               = "agentic-recruiter-github-deploy"
   assume_role_policy = data.aws_iam_policy_document.github_trust.json
 }
 

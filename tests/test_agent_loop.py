@@ -4,12 +4,12 @@ from datetime import date
 
 from fastapi.testclient import TestClient
 
-from agentic_jev_rag.gateway import ChatResult, FakeModelGateway, ToolCall
-from agentic_jev_rag.rag.api import create_rag_app
-from agentic_jev_rag.rag.service import RagService
-from agentic_jev_rag.recruiter.agent_loop import Tool, run_agent
-from agentic_jev_rag.recruiter.rag_client import RagClient, RagError
-from agentic_jev_rag.recruiter.tools import rag_tools
+from agentic_recruiter.gateway import ChatResult, FakeModelGateway, ToolCall
+from agentic_recruiter.rag.api import create_rag_app
+from agentic_recruiter.rag.service import RagService
+from agentic_recruiter.recruiter.agent_loop import Tool, run_agent
+from agentic_recruiter.recruiter.rag_client import RagClient, RagError
+from agentic_recruiter.recruiter.tools import rag_tools
 from tests.rag_scripts import scripted_gateway, turns
 
 ECHO = Tool("echo", "Echo text back", {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}, lambda text: {"echo": text})
@@ -152,7 +152,7 @@ def test_long_tool_results_are_cut_with_a_visible_marker():
 
 
 def test_rag_tools_return_compact_match_results_that_fit_without_truncation(indexed, config, qdrant, fixture_documents):
-    from agentic_jev_rag.recruiter.agent_loop import TOOL_RESULT_LIMIT
+    from agentic_recruiter.recruiter.agent_loop import TOOL_RESULT_LIMIT
     import json as _json
 
     service = RagService(config, scripted_gateway(), qdrant, fixture_documents, today=lambda: date(2026, 10, 8))

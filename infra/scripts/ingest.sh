@@ -14,5 +14,5 @@ echo "ingest task: $task"
 
 aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$task"
 code=$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --query 'tasks[0].containers[0].exitCode' --output text)
-echo "ingest exit code: $code (logs: /ecs/swiftai/ingest)"
+echo "ingest exit code: $code (logs: /ecs/agentic-recruiter/ingest)"
 [ "$code" = "0" ]

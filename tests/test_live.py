@@ -1,6 +1,6 @@
 """Live smoke suite: real OpenRouter calls against the indexed corpus. Opt in with `uv run pytest -m live`.
 
-Needs OPEN_ROUTER_API_TOKEN, Qdrant running, and the corpus indexed (`uv run python -m agentic_jev_rag.rag.ingest`).
+Needs OPEN_ROUTER_API_TOKEN, Qdrant running, and the corpus indexed (`uv run python -m agentic_recruiter.rag.ingest`).
 A full run costs roughly $1.
 """
 
@@ -8,15 +8,15 @@ import pytest
 from fastapi.testclient import TestClient
 from qdrant_client import QdrantClient
 
-from agentic_jev_rag.config import load_config
-from agentic_jev_rag.corpus.documents import load_corpus
-from agentic_jev_rag.openrouter import OpenRouterGateway
-from agentic_jev_rag.rag.api import create_rag_app
-from agentic_jev_rag.rag.models import AskRequest
-from agentic_jev_rag.rag.service import RagService
-from agentic_jev_rag.recruiter.context import RecruiterContext
-from agentic_jev_rag.recruiter.graph import run_recruitment
-from agentic_jev_rag.recruiter.rag_client import RagClient
+from agentic_recruiter.config import load_config
+from agentic_recruiter.corpus.documents import load_corpus
+from agentic_recruiter.openrouter import OpenRouterGateway
+from agentic_recruiter.rag.api import create_rag_app
+from agentic_recruiter.rag.models import AskRequest
+from agentic_recruiter.rag.service import RagService
+from agentic_recruiter.recruiter.context import RecruiterContext
+from agentic_recruiter.recruiter.graph import run_recruitment
+from agentic_recruiter.recruiter.rag_client import RagClient
 
 pytestmark = pytest.mark.live
 
@@ -55,7 +55,7 @@ def test_reranker_role_ranks_the_relevant_document_first(gateway):
 
 
 def test_jev_refuses_an_indirectly_discriminatory_request(gateway):
-    from agentic_jev_rag.system1 import JevDecider
+    from agentic_recruiter.system1 import JevDecider
 
     decision = JevDecider(gateway, CONFIG.models.jev_model).input_guardrail("Digital natives only, please.")
 
@@ -89,7 +89,7 @@ def test_a_real_recruitment_run_produces_a_compliant_report(gateway, service):
 
 def test_a_live_interview_reprompts_redirects_and_probes_on_jev(gateway, service):
     """Through the Recruiter app with real models and Jev: gibberish, an injection, a vague answer, a strong one."""
-    from agentic_jev_rag.recruiter.api import create_recruiter_app
+    from agentic_recruiter.recruiter.api import create_recruiter_app
 
     rag = RagClient("http://rag", http=TestClient(create_rag_app(service)))
     ctx = RecruiterContext(config=CONFIG, gateway=gateway, rag=rag, system_1="jev")
